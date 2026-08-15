@@ -1,0 +1,2196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>// GENERATED from dc-runtime/src/*.ts — do not edit. Rebuild with `cd dc-runtime && bun run build`.
+"use strict";
+(() => {
+  var __defProp = Object.defineProperty;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+  // src/react.ts
+  function getReact() {
+    const R = window.React;
+    if (!R) throw new Error("dc-runtime: window.React is not available yet");
+    return R;
+  }
+  function getReactDOM() {
+    const RD = window.ReactDOM;
+    if (!RD) throw new Error("dc-runtime: window.ReactDOM is not available yet");
+    return RD;
+  }
+  var h = ((...args) => getReact().createElement(
+    ...args
+  ));
+
+  // src/parse.ts
+  function parseDcDocument(doc) {
+    const dc = doc.querySelector("x-dc");
+    if (!dc) return null;
+    const scriptEl = doc.querySelector("script[data-dc-script]");
+    const { props, preview } = parseDataProps(
+      scriptEl?.getAttribute("data-props") ?? null
+    );
+    return {
+      template: dc.innerHTML,
+      js: scriptEl ? scriptEl.textContent || "" : "",
+      props,
+      preview
+    };
+  }
+  function parseDcText(src) {
+    const openMatch = /<x-dc(?:\s[^>]*)?>/.exec(src);
+    if (!openMatch) return null;
+    const close = src.lastIndexOf("");
+    if (close === -1 || close < openMatch.index) return null;
+    const template = src.slice(openMatch.index + openMatch[0].length, close);
+    const doc = new DOMParser().parseFromString(src, "text/html");
+    const scriptEl = doc.querySelector("script[data-dc-script]");
+    const { props, preview } = parseDataProps(
+      scriptEl?.getAttribute("data-props") ?? null
+    );
+    return {
+      template,
+      js: scriptEl ? scriptEl.textContent || "" : "",
+      props,
+      preview
+    };
+  }
+  function parseDataProps(raw) {
+    if (!raw) return { props: null, preview: null };
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return { props: null, preview: null };
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { props: null, preview: null };
+    }
+    const obj = parsed;
+    const preview = obj.$preview && typeof obj.$preview === "object" ? obj.$preview : null;
+    const rest = {};
+    for (const k of Object.keys(obj)) {
+      if (k[0] !== "$") rest[k] = obj[k];
+    }
+    return { props: Object.keys(rest).length ? rest : null, preview };
+  }
+  function dcNameFromPath(pathname) {
+    let p = pathname || "";
+    try {
+      p = decodeURIComponent(p);
+    } catch {
+    }
+    const base = p.split("/").pop() || "Root";
+    return base.replace(/\.dc\.html$/, "").replace(/\.html?$/, "") || "Root";
+  }
+
+  // src/boot.ts
+  var BASE_CSS = `
+    .sc-placeholder{background:color-mix(in srgb,currentColor 8%,transparent);
+      border:1px solid color-mix(in srgb,currentColor 50%,transparent);
+      border-radius:2px;box-sizing:border-box;overflow:hidden}
+    @keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+    html.sc-dc-streaming .sc-placeholder,
+    html.sc-dc-streaming .sc-interp.sc-missing{position:relative;
+      background:color-mix(in srgb,currentColor 5%,transparent);
+      border-color:transparent}
+    html.sc-dc-streaming .sc-placeholder::before,
+    html.sc-dc-streaming .sc-interp.sc-missing::before{content:'';
+      position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
+      background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
+    html.sc-dc-streaming .sc-placeholder:nth-child(n+9 of .sc-placeholder)::before,
+    html.sc-dc-streaming .sc-interp.sc-missing:nth-child(n+9 of .sc-interp.sc-missing)::before{animation:none;
+      background:color-mix(in srgb,currentColor 8%,transparent)}
+    .sc-placeholder-error{padding:4px 8px;font:11px/1.4 ui-monospace,monospace;
+      color:color-mix(in srgb,currentColor 70%,transparent);word-break:break-word}
+    .sc-interp.sc-missing{display:inline-block;width:2em;height:1em;overflow:hidden;
+      vertical-align:text-bottom;background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;color:transparent;
+      user-select:none}
+    .sc-interp.sc-unresolved{font-family:ui-monospace,monospace;font-size:.85em;
+      color:color-mix(in srgb,currentColor 50%,transparent);
+      background:color-mix(in srgb,currentColor 10%,transparent);border-radius:3px;
+      padding:0 3px}
+    .sc-host.sc-has-error{position:relative}
+    .sc-logic-error{position:absolute;top:8px;left:8px;z-index:2147483647;max-width:60ch;
+      padding:6px 10px;background:#b00020;color:#fff;font:12px/1.4 ui-monospace,monospace;
+      border-radius:4px;white-space:pre-wrap;pointer-events:none}
+    /* Mirrors PRINT_BASELINE_CSS in apps/web deck-stage-export.ts \u2014 keep both
+       in sync until dc-runtime regains a build step. */
+    @media print {
+      @page { margin: 0.5cm; }
+      figure, table { break-inside: avoid; }
+      #dc-root, #dc-root > .sc-host { height: auto; }
+      *, *::before, *::after {
+        print-color-adjust: exact; -webkit-print-color-adjust: exact;
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+        animation-delay: -99s !important; animation-duration: .001s !important;
+        animation-iteration-count: 1 !important; animation-fill-mode: both !important;
+        animation-play-state: running !important; transition-duration: 0s !important;
+      }
+    }
+  `;
+  var FULL_PAGE_CSS = "html,body{height:100%;margin:0}#dc-root,#dc-root>.sc-host{height:100%}";
+  function rootNameForDocument(doc, loc) {
+    let bootPath = loc.pathname || "";
+    if (!/\.dc\.html?$/i.test(safeDecode(bootPath))) {
+      try {
+        bootPath = new URL(doc.baseURI || "/").pathname;
+      } catch {
+      }
+    }
+    return dcNameFromPath(bootPath);
+  }
+  function safeDecode(s) {
+    try {
+      return decodeURIComponent(s);
+    } catch {
+      return s;
+    }
+  }
+  function boot(runtime, doc = document) {
+    const parsed = parseDcDocument(doc);
+    if (!parsed) return null;
+    const React = getReact();
+    const rootName = rootNameForDocument(doc, location);
+    runtime.markFetched(rootName);
+    runtime.setRootName(rootName);
+    runtime.adoptParsed(rootName, parsed);
+    fetch(location.href).then((res) => res.ok ? res.text() : "").then((t) => {
+      const raw = t ? parseDcText(t) : null;
+      if (raw?.template) runtime.updateHtml(rootName, raw.template);
+    }).catch(() => {
+    });
+    const dc = doc.querySelector("x-dc");
+    const hostEl = doc.createElement("div");
+    hostEl.id = "dc-root";
+    dc.replaceWith(hostEl);
+    if (!parsed.preview) {
+      const s = doc.createElement("style");
+      s.textContent = FULL_PAGE_CSS;
+      doc.head.appendChild(s);
+    }
+    const Root = runtime.getDC(rootName);
+    const entry = runtime.registry.get(rootName);
+    function StandaloneRoot() {
+      const [, setTick] = React.useState(0);
+      React.useEffect(() => {
+        const sub = () => setTick((n) => n + 1);
+        entry.subs.add(sub);
+        return () => {
+          entry.subs.delete(sub);
+        };
+      }, []);
+      const defaults = React.useMemo(() => {
+        const d = {};
+        for (const k in entry.propsMeta || {}) {
+          const v = entry.propsMeta?.[k]?.default;
+          if (v !== void 0) d[k] = v;
+        }
+        return d;
+      }, [entry.propsMeta]);
+      return h(Root, { ...defaults, ...entry.propOverrides || {} });
+    }
+    const ReactDOM = getReactDOM();
+    if (ReactDOM.createRoot)
+      ReactDOM.createRoot(hostEl).render(h(StandaloneRoot));
+    else ReactDOM.render(h(StandaloneRoot), hostEl);
+    return rootName;
+  }
+
+  // src/expr.ts
+  var IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*/;
+  var NUMBER_RE = /^-?\d+(\.\d+)?$/;
+  function resolve(vals, src) {
+    const expr = String(src).trim();
+    if (!expr) return void 0;
+    if (expr[0] === "(" && expr[expr.length - 1] === ")" && parensWrapWhole(expr)) {
+      return resolve(vals, expr.slice(1, -1));
+    }
+    const eq = findTopLevelEquality(expr);
+    if (eq) {
+      const lv = resolve(vals, expr.slice(0, eq.index));
+      const rv = resolve(vals, expr.slice(eq.index + eq.op.length));
+      switch (eq.op) {
+        case "===":
+          return lv === rv;
+        case "!==":
+          return lv !== rv;
+        case "==":
+          return lv == rv;
+        default:
+          return lv != rv;
+      }
+    }
+    if (expr[0] === "!") return !resolve(vals, expr.slice(1));
+    if (expr === "true") return true;
+    if (expr === "false") return false;
+    if (expr === "null") return null;
+    if (expr === "undefined") return void 0;
+    if (NUMBER_RE.test(expr)) return Number(expr);
+    if (expr.length >= 2 && (expr[0] === '"' || expr[0] === "'") && expr[expr.length - 1] === expr[0]) {
+      return expr.slice(1, -1);
+    }
+    return resolvePath(vals, expr);
+  }
+  function parensWrapWhole(expr) {
+    let depth = 0;
+    for (let i = 0; i < expr.length - 1; i++) {
+      if (expr[i] === "(") depth++;
+      else if (expr[i] === ")") {
+        depth--;
+        if (depth === 0) return false;
+      }
+    }
+    return true;
+  }
+  function findTopLevelEquality(expr) {
+    let depth = 0;
+    for (let i = 0; i < expr.length; i++) {
+      const c = expr[i];
+      if (c === "[" || c === "(") depth++;
+      else if (c === "]" || c === ")") depth--;
+      else if (depth === 0 && (c === "=" || c === "!") && expr[i + 1] === "=") {
+        if (i > 0 && (expr[i - 1] === "=" || expr[i - 1] === "!")) continue;
+        if (!expr.slice(0, i).trim()) continue;
+        const op = expr[i + 2] === "=" ? c + "==" : c + "=";
+        return { index: i, op };
+      }
+    }
+    return null;
+  }
+  function resolvePath(vals, expr) {
+    const head = expr.match(IDENT_RE);
+    if (!head) return void 0;
+    let cur = vals == null ? void 0 : vals[head[0]];
+    let i = head[0].length;
+    while (i < expr.length) {
+      if (expr[i] === ".") {
+        const m = expr.slice(i + 1).match(IDENT_RE) || expr.slice(i + 1).match(/^\d+/);
+        if (!m) return void 0;
+        cur = cur == null ? void 0 : cur[m[0]];
+        i += 1 + m[0].length;
+      } else if (expr[i] === "[") {
+        let depth = 1;
+        let j = i + 1;
+        while (j < expr.length && depth > 0) {
+          if (expr[j] === "[") depth++;
+          else if (expr[j] === "]") {
+            depth--;
+            if (depth === 0) break;
+          }
+          j++;
+        }
+        if (depth !== 0) return void 0;
+        const key = resolve(vals, expr.slice(i + 1, j));
+        cur = cur == null ? void 0 : cur[key];
+        i = j + 1;
+      } else {
+        return void 0;
+      }
+    }
+    return cur;
+  }
+
+  // src/encode.ts
+  var CAMEL_ATTR = "sc-camel-";
+  var INLINE_TEXT_TAGS = new Set(
+    "a abbr b bdi bdo br cite code del dfn em i ins kbd mark q s samp small span strike strong sub sup u var wbr".split(
+      " "
+    )
+  );
+  var RAW_WRAP = {
+    select: "sc-raw-select",
+    table: "sc-raw-table",
+    tbody: "sc-raw-tbody",
+    thead: "sc-raw-thead",
+    tfoot: "sc-raw-tfoot",
+    tr: "sc-raw-tr",
+    td: "sc-raw-td",
+    th: "sc-raw-th",
+    caption: "sc-raw-caption"
+  };
+  var RAW_UNWRAP = Object.fromEntries(
+    Object.entries(RAW_WRAP).map(([k, v]) => [v, k])
+  );
+  var EVENT_MAP = {
+    onclick: "onClick",
+    onchange: "onChange",
+    oninput: "onInput",
+    onsubmit: "onSubmit",
+    onkeydown: "onKeyDown",
+    onkeyup: "onKeyUp",
+    onkeypress: "onKeyPress",
+    onmousedown: "onMouseDown",
+    onmouseup: "onMouseUp",
+    onmouseenter: "onMouseEnter",
+    onmouseleave: "onMouseLeave",
+    onfocus: "onFocus",
+    onblur: "onBlur",
+    ondoubleclick: "onDoubleClick",
+    oncontextmenu: "onContextMenu"
+  };
+  var ATTRS = `(?:[^>"']|"[^"]*"|'[^']*')*`;
+  var IMPORT_SELF_CLOSE_RE = new RegExp(
+    "<(x-import|dc-import)(" + ATTRS + ")/>",
+    "gi"
+  );
+  var CAMEL_ATTR_RE = /(\s)([a-z]+[A-Z][A-Za-z0-9]*)(\s*=)/g;
+  function encodeCase(html) {
+    html = html.replace(
+      IMPORT_SELF_CLOSE_RE,
+      (_, t, a) => "<" + t + a + "></" + t + ">"
+    );
+    html = html.replace(/<helmet(\s|>)/gi, "<sc-helmet$1");
+    html = html.replace(/<\/helmet\s*>/gi, "</sc-helmet>");
+    html = html.replace(
+      CAMEL_ATTR_RE,
+      (_, sp, name, eq) => sp + CAMEL_ATTR + name.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase()) + eq
+    );
+    for (const [real, alias] of Object.entries(RAW_WRAP)) {
+      html = html.replace(
+        new RegExp("(</?)" + real + "(?=[\\s>])", "gi"),
+        "$1" + alias
+      );
+    }
+    return html;
+  }
+  function kebabToCamel(s) {
+    return s.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  }
+  function cssToObj(css) {
+    const o = {};
+    for (const decl of css.split(";")) {
+      const i = decl.indexOf(":");
+      if (i < 0) continue;
+      const prop = decl.slice(0, i).trim();
+      o[prop.startsWith("--") ? prop : kebabToCamel(prop)] = decl.slice(i + 1).trim();
+    }
+    return o;
+  }
+  function compileAttr(raw) {
+    const whole = raw.match(/^\s*\{\{([\s\S]+?)\}\}\s*$/);
+    if (whole) {
+      const path = whole[1];
+      return (vals) => resolve(vals, path);
+    }
+    if (raw.includes("{{")) {
+      const parts = raw.split(/\{\{([\s\S]+?)\}\}/g);
+      return (vals) => parts.map((s, i) => i & 1 ? resolve(vals, s) ?? "" : s).join("");
+    }
+    return () => raw;
+  }
+
+  // src/compile.ts
+  function collectProps(node, kind, host) {
+    const propGetters = [];
+    const pseudoClasses = [];
+    let hintSize = null;
+    for (const { name, value } of [...node.attributes]) {
+      if (name === "sc-name" || name === "data-dc-tpl") continue;
+      let key = name;
+      if (key.startsWith(CAMEL_ATTR))
+        key = kebabToCamel(key.slice(CAMEL_ATTR.length));
+      if (key === "hint-size") {
+        hintSize = value;
+        continue;
+      }
+      if (key.startsWith("style-")) {
+        pseudoClasses.push(host.pseudoClass(key.slice(6), value));
+        continue;
+      }
+      if (kind !== "dom") {
+        if (key.includes("-") && !(kind === "x-import" && (key.startsWith("aria-") || key.startsWith("data-"))))
+          key = kebabToCamel(key);
+      } else {
+        if (key === "class") key = "className";
+        else if (key === "for") key = "htmlFor";
+        else if (key.startsWith("on"))
+          key = EVENT_MAP[key] || "on" + key[2].toUpperCase() + key.slice(3);
+      }
+      propGetters.push([key, compileAttr(value)]);
+    }
+    return { propGetters, pseudoClasses, hintSize };
+  }
+  var HOST_STYLE_PROPS = /* @__PURE__ */ new Set([
+    "position",
+    "left",
+    "right",
+    "top",
+    "bottom",
+    "inset",
+    "width",
+    "height",
+    "z-index",
+    "transform"
+  ]);
+  function hostPositionStyle(style) {
+    const all = typeof style === "string" ? cssToObj(style) : style != null && typeof style === "object" ? style : null;
+    if (!all) return void 0;
+    const out = {};
+    for (const [k, v] of Object.entries(all)) {
+      const kebab = k.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
+      if (HOST_STYLE_PROPS.has(kebab)) out[k] = v;
+    }
+    return Object.keys(out).length ? out : void 0;
+  }
+  function compileTemplate(html, host) {
+    const tpl = document.createElement("template");
+    //! nosemgrep: direct-inner-html-assignment
+    tpl.innerHTML = encodeCase(html);
+    let tplN = 0;
+    (function stamp(node) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        node.setAttribute("data-dc-tpl", String(tplN++));
+      }
+      for (const c of node.childNodes) stamp(c);
+    })(tpl.content);
+    const builders = walkChildren(tpl.content, host);
+    const render = ((vals, ctx) => builders.map((b, i) => b(vals || {}, ctx, i)));
+    render.__annotated = tpl.innerHTML;
+    return render;
+  }
+  function walkChildren(node, host) {
+    return [...node.childNodes].map((c) => walk(c, host)).filter((b) => b != null);
+  }
+  function walk(node, host) {
+    if (node.nodeType === Node.TEXT_NODE) return walkText(node);
+    if (node.nodeType !== Node.ELEMENT_NODE) return null;
+    const el = node;
+    const tag = el.tagName.toLowerCase();
+    if (tag === "sc-for") return walkFor(el, host);
+    if (tag === "sc-if") return walkIf(el, host);
+    if (tag === "x-import") return walkXImport(el, host);
+    if (tag === "sc-helmet") return host.helmet(el);
+    if (tag === "dc-import") return walkComponent(el, host);
+    return walkElement(el, host);
+  }
+  var warnedHoles = /* @__PURE__ */ new Set();
+  function warnUnresolved(ctx, what) {
+    const key = (ctx?.__name || "?") + "\0" + what;
+    if (warnedHoles.has(key)) return;
+    warnedHoles.add(key);
+    console.warn("[dc-runtime] " + (ctx?.__name || "template") + ": " + what);
+  }
+  function walkText(node) {
+    const txt = node.nodeValue ?? "";
+    if (!txt.includes("{{")) {
+      if (!txt.trim() && !txt.includes(" ")) return null;
+      return () => txt;
+    }
+    const parts = txt.split(/\{\{([\s\S]+?)\}\}/g);
+    return (vals, ctx, key) => h(
+      getReact().Fragment,
+      { key },
+      ...parts.map((p, i) => {
+        if (!(i & 1)) return p;
+        const v = resolve(vals, p);
+        if (v === void 0) {
+          if (!ctx?.__streamingNow) {
+            if (document.body?.hasAttribute("data-dc-editor-on")) {
+              return h(
+                "span",
+                { key: i, className: "sc-interp sc-unresolved" },
+                "{{ " + p.trim() + " }}"
+              );
+            }
+            warnUnresolved(
+              ctx,
+              "{{ " + p.trim() + " }} never resolved \u2014 rendered as empty"
+            );
+            return null;
+          }
+          return h(
+            "span",
+            { key: i, className: "sc-interp sc-missing" },
+            p.trim()
+          );
+        }
+        if (getReact().isValidElement(v) || Array.isArray(v)) {
+          return h(getReact().Fragment, { key: i }, v);
+        }
+        if (v === null || typeof v === "boolean") return null;
+        return h("span", { key: i, className: "sc-interp" }, String(v));
+      })
+    );
+  }
+  function walkFor(el, host) {
+    const listGet = compileAttr(el.getAttribute("list") || "");
+    const asName = el.getAttribute("as") || "item";
+    const hintN = parseInt(el.getAttribute("hint-placeholder-count") || "0", 10);
+    const kids = walkChildren(el, host);
+    const listSrc = el.getAttribute("list") || "";
+    return (vals, ctx, key) => {
+      let list = listGet(vals);
+      if (!Array.isArray(list)) {
+        if (!ctx?.__streamingNow) {
+          if (list !== void 0 && list !== null) {
+            warnUnresolved(
+              ctx,
+              'sc-for list="' + listSrc + '" is not an array (' + typeof list + ")"
+            );
+          }
+          list = [];
+        } else {
+          list = hintN > 0 ? Array(hintN).fill(void 0) : [];
+        }
+      }
+      return h(
+        getReact().Fragment,
+        { key },
+        list.map((item, i) => {
+          const sub = { ...vals, [asName]: item, $index: i };
+          return h(
+            getReact().Fragment,
+            { key: i },
+            kids.map((b, j) => b(sub, ctx, j))
+          );
+        })
+      );
+    };
+  }
+  function walkIf(el, host) {
+    const valGet = compileAttr(el.getAttribute("value") || "");
+    const hintRaw = el.getAttribute("hint-placeholder-val");
+    const hintGet = hintRaw != null ? compileAttr(hintRaw) : null;
+    const kids = walkChildren(el, host);
+    return (vals, ctx, key) => {
+      let v = valGet(vals);
+      if (v === void 0 && hintGet && ctx?.__streamingNow) v = hintGet(vals);
+      return v ? h(
+        getReact().Fragment,
+        { key },
+        kids.map((b, j) => b(vals, ctx, j))
+      ) : null;
+    };
+  }
+  function walkComponent(el, host) {
+    const name = el.getAttribute("name") || el.getAttribute("component") || "";
+    el.removeAttribute("name");
+    el.removeAttribute("component");
+    const tplId = el.getAttribute("data-dc-tpl");
+    const styleRaw = el.getAttribute("style");
+    el.removeAttribute("style");
+    const styleGet = styleRaw != null ? compileAttr(styleRaw) : null;
+    const { propGetters, hintSize } = collectProps(el, "dc-import", host);
+    const kids = walkChildren(el, host);
+    return (vals, ctx, key) => {
+      const props = {
+        key,
+        __hintSize: hintSize,
+        __tplId: tplId,
+        __hostStyle: styleGet ? hostPositionStyle(styleGet(vals)) : void 0
+      };
+      for (const [k, g] of propGetters) {
+        const v = g(vals);
+        if (k === "dcProps") {
+          if (v && typeof v === "object") Object.assign(props, v);
+          continue;
+        }
+        props[k] = v;
+      }
+      if (kids.length) props.children = kids.map((b, j) => b(vals, ctx, j));
+      return h(host.component(name), props);
+    };
+  }
+  function walkXImport(el, host) {
+    const globalNameGet = compileAttr(
+      el.getAttribute("component-from-global-scope") || ""
+    );
+    const exportNameGet = compileAttr(
+      el.getAttribute("component") || el.getAttribute("name") || ""
+    );
+    const fromRaw = el.getAttribute("from") || el.getAttribute("src") || el.getAttribute("import") || "";
+    const urls = fromRaw.trim() ? fromRaw.trim().split(/\s+/) : [];
+    const url = urls.length ? urls[urls.length - 1] : "";
+    const kindOf = (u) => /\.(jsx|tsx)(\?|#|$)/i.test(u) ? "jsx" : "js";
+    const tplId = el.getAttribute("data-dc-tpl");
+    const styleRaw = el.getAttribute("style");
+    el.removeAttribute("style");
+    const styleGet = styleRaw != null ? compileAttr(styleRaw) : null;
+    const wrap = tplId != null || styleGet != null;
+    const { propGetters, hintSize } = collectProps(el, "x-import", host);
+    const hasContent = el.children.length > 0 || !!(el.textContent || "").trim();
+    const kids = hasContent ? walkChildren(el, host) : [];
+    const urlBindable = fromRaw.includes("{{");
+    if (urls.length && !urlBindable) {
+      let prev;
+      for (const u of urls) prev = host.loadExternal(kindOf(u), u, prev);
+    }
+    const evalName = (g, vals) => {
+      const v = g(vals);
+      const s = v == null ? "" : String(v);
+      return s.includes("{{") ? "" : s;
+    };
+    return (vals, ctx, key) => {
+      const globalName = evalName(globalNameGet, vals);
+      const name = globalName || evalName(exportNameGet, vals);
+      const C = !name || urlBindable ? null : globalName ? host.resolveExternalGlobal(url, globalName) : host.resolveExternal(url, name);
+      const hostStyle = styleGet ? hostPositionStyle(styleGet(vals)) : void 0;
+      const wrapper = wrap ? {
+        key,
+        className: "sc-host-x",
+        "data-dc-tpl": tplId,
+        style: hostStyle || { display: "contents" }
+      } : null;
+      if (!C) {
+        const error = urlBindable ? "x-import `from` cannot contain {{ \u2026 }} \u2014 module URLs are resolved at parse time; use a literal URL" : host.resolveExternalError(url, name);
+        const ph = host.placeholder({
+          key: wrapper ? void 0 : key,
+          name,
+          hintSize,
+          error
+        });
+        return wrapper ? h("div", wrapper, ph) : ph;
+      }
+      const props = wrapper ? {} : { key };
+      let unresolvedHole = false;
+      for (const [k, g] of propGetters) {
+        if (k === "component" || k === "componentFromGlobalScope" || k === "from") {
+          continue;
+        }
+        const v = g(vals);
+        if (v === void 0) unresolvedHole = true;
+        if (k === "dcProps") {
+          if (v && typeof v === "object") Object.assign(props, v);
+          continue;
+        }
+        props[k] = v;
+      }
+      if (unresolvedHole && ctx?.__htmlStreamingNow) {
+        const ph = host.placeholder({
+          key: wrapper ? void 0 : key,
+          name,
+          hintSize,
+          error: null
+        });
+        return wrapper ? h("div", wrapper, ph) : ph;
+      }
+      if (kids.length) props.children = kids.map((b, j) => b(vals, ctx, j));
+      return wrapper ? h("div", wrapper, h(C, props)) : h(C, props);
+    };
+  }
+  function contentKey(el) {
+    const clone = el.cloneNode(true);
+    for (const d of clone.querySelectorAll("*")) {
+      while (d.attributes.length) d.removeAttribute(d.attributes[0].name);
+    }
+    const s = clone.innerHTML;
+    let h2 = 5381;
+    for (let i = 0; i < s.length; i++) h2 = (h2 << 5) + h2 + s.charCodeAt(i) | 0;
+    return s.length + "." + (h2 >>> 0).toString(36);
+  }
+  var NEVER_CONTENT_KEYED = new Set(
+    "script style textarea option title select canvas iframe video audio".split(
+      " "
+    )
+  );
+  var NOT_INLINE_SELECTOR = ":not(" + [...INLINE_TEXT_TAGS].join(",") + ")";
+  function walkElement(el, host) {
+    const realTag = RAW_UNWRAP[el.localName] || el.localName;
+    const tplId = el.getAttribute("data-dc-tpl");
+    const inlineOnly = el.childNodes.length > 0 && !NEVER_CONTENT_KEYED.has(realTag) && el.querySelector(NOT_INLINE_SELECTOR) === null;
+    const keySuffix = inlineOnly ? "|" + contentKey(el) : "";
+    const { propGetters, pseudoClasses } = collectProps(el, "dom", host);
+    const kids = walkChildren(el, host);
+    return (vals, ctx, key) => {
+      const props = {
+        key: key + keySuffix,
+        "data-dc-tpl": tplId
+      };
+      for (const [k, g] of propGetters) {
+        let v = g(vals);
+        if (k === "style" && typeof v === "string") v = cssToObj(v);
+        if ((k === "value" || k === "checked") && v === void 0) {
+          v = k === "checked" ? false : "";
+        }
+        props[k] = v;
+      }
+      if (pseudoClasses.length) {
+        props.className = [props.className, ...pseudoClasses].filter(Boolean).join(" ");
+      }
+      return h(realTag, props, ...kids.map((b, j) => b(vals, ctx, j)));
+    };
+  }
+
+  // src/logic.ts
+  var StreamableLogic = class {
+    constructor(props) {
+      __publicField(this, "props");
+      __publicField(this, "state", {});
+      /** Back-pointer to the wrapper component, installed after construction. */
+      __publicField(this, "__host");
+      this.props = props || {};
+    }
+    setState(update, cb) {
+      this.__host && this.__host.__setLogicState(update, cb);
+    }
+    forceUpdate() {
+      this.__host && this.__host.forceUpdate();
+    }
+    componentDidMount() {
+    }
+    componentDidUpdate(_prevProps) {
+    }
+    componentWillUnmount() {
+    }
+    /** The flat object the template renders against (merged over props). */
+    renderVals() {
+      return {};
+    }
+  };
+  function evalDcLogic(src) {
+    //! nosemgrep: eval-and-function-constructor
+    const fn = new Function(
+      "DCLogic",
+      "StreamableLogic",
+      "React",
+      src + '\n;return (typeof Component!=="undefined"&&Component)||undefined;'
+    );
+    return fn(StreamableLogic, StreamableLogic, getReact());
+  }
+
+  // src/component.ts
+  function shallowEqual(a, b) {
+    if (!b) return false;
+    const ak = Object.keys(a).filter((k) => k !== "children");
+    const bk = Object.keys(b).filter((k) => k !== "children");
+    if (ak.length !== bk.length) return false;
+    for (const k of ak) if (a[k] !== b[k]) return false;
+    return true;
+  }
+  function Placeholder({
+    name,
+    hintSize,
+    streaming,
+    error
+  }) {
+    const [w, hgt] = (hintSize || "100%,60px").split(",");
+    return h(
+      "div",
+      {
+        className: "sc-placeholder" + (streaming ? " sc-streaming" : ""),
+        style: { width: w.trim(), height: hgt && hgt.trim() },
+        title: name
+      },
+      error ? h(
+        "div",
+        { className: "sc-placeholder-error" },
+        (name ? name + ": " : "") + error
+      ) : null
+    );
+  }
+  function hintToMin(hint) {
+    if (!hint) return void 0;
+    const [w, hgt] = hint.split(",");
+    return { minWidth: w.trim(), minHeight: hgt && hgt.trim() };
+  }
+  function createComponentFactory(registry, ensureFetched) {
+    const React = getReact();
+    const AncestorContext = React.createContext([]);
+    class StreamableComponent extends React.Component {
+      constructor(props) {
+        super(props);
+        __publicField(this, "__name");
+        __publicField(this, "__sub");
+        __publicField(this, "__needsDidMount", false);
+        /** Snapshot of the registry's streaming flags taken at render time —
+         *  builders read it off the RenderCtx (this) to pick placeholder vs
+         *  render-nothing for unresolved values. */
+        __publicField(this, "__streamingNow", false);
+        __publicField(this, "__htmlStreamingNow", false);
+        /** When a construct throws, remember the (class, registry.ver, props)
+         *  triple so render-time reconcile doesn't re-attempt it on every parent
+         *  re-render. A registry bump (new class, template, external module
+         *  resolving via bumpAll) changes `ver` and breaks the memo so an
+         *  env-dependent constructor can self-heal. */
+        __publicField(this, "__failedLogic", null);
+        __publicField(this, "__failedUserProps", null);
+        __publicField(this, "__failedVer", -1);
+        /** Per-instance constructor error — kept here (not on the registry entry)
+         *  so one instance's successful construct can't hide a sibling's failure,
+         *  and a construct can never wipe an eval error `updateJs` recorded on
+         *  `r.logicError`. */
+        __publicField(this, "__ctorError", null);
+        __publicField(this, "logic");
+        this.__name = props.__name;
+        this.state = { __v: 0, __err: null };
+        this.__sub = () => {
+          if (this.state.__err) this.setState({ __err: null });
+          this.forceUpdate();
+        };
+        this.__makeLogic(registry.get(this.__name).Logic, null);
+        ensureFetched(this.__name);
+      }
+      /** Error-boundary hook: a render crash anywhere in this DC's subtree
+       *  (its own template, an x-import'd component, a child DC without its
+       *  own deeper boundary) lands here instead of unmounting the page. */
+      static getDerivedStateFromError(e) {
+        return { __err: e instanceof Error && e.message ? e.message : String(e) };
+      }
+      componentDidCatch(e, info) {
+        console.error(
+          "[dc-runtime] render error in <" + this.__name + ">:",
+          e,
+          info?.componentStack || ""
+        );
+      }
+      /** Instantiate the logic class (or the no-op base) and adopt `prevState`
+       *  over its initial state — used both at mount and on hot-swap. */
+      __makeLogic(Logic, prevState) {
+        const L = Logic || StreamableLogic;
+        try {
+          this.logic = new L(this.__userProps());
+          this.__failedLogic = null;
+          this.__failedUserProps = null;
+          this.__ctorError = null;
+        } catch (e) {
+          console.error(e);
+          this.__failedLogic = Logic;
+          this.__failedUserProps = this.__userProps();
+          this.__failedVer = registry.get(this.__name).ver;
+          this.__ctorError = this.__name + ": " + (e instanceof Error && e.message ? e.message : String(e));
+          this.logic = new StreamableLogic(
+            this.__userProps()
+          );
+        }
+        this.logic.__host = this;
+        if (prevState)
+          this.logic.state = { ...this.logic.state || {}, ...prevState };
+      }
+      /** The props the author's logic + template see — internal __-prefixed
+       *  wiring stripped. */
+      __userProps() {
+        const { __name, __hintSize, __tplId, __hostStyle, ...rest } = this.props;
+        return rest;
+      }
+      __setLogicState(update, cb) {
+        const prev = this.logic.state;
+        const patch = typeof update === "function" ? update(prev) : update;
+        this.logic.state = { ...prev, ...patch };
+        this.setState((s) => ({ __v: s.__v + 1 }), cb);
+      }
+      /** Swap the logic instance when the registry's Logic class changed
+       *  (streaming completion, hot reload). State carries over; didMount
+       *  re-fires after the swap commits so refs exist. */
+      __reconcileLogic() {
+        const r = registry.get(this.__name);
+        const Next = r.Logic;
+        const Cur = this.logic.constructor;
+        if (Next === Cur || !Next && Cur === StreamableLogic || Next === this.__failedLogic && r.ver === this.__failedVer && shallowEqual(this.__userProps(), this.__failedUserProps)) {
+          return;
+        }
+        if (!this.__needsDidMount) {
+          try {
+            this.logic.componentWillUnmount();
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        this.__makeLogic(Next, this.logic.state);
+        this.__needsDidMount = true;
+      }
+      componentDidMount() {
+        registry.get(this.__name).subs.add(this.__sub);
+        try {
+          this.logic.componentDidMount();
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      componentDidUpdate(prevProps) {
+        this.logic.props = this.__userProps();
+        if (this.__needsDidMount) {
+          if (this.state.__err || !registry.get(this.__name).tpl) return;
+          this.__needsDidMount = false;
+          try {
+            this.logic.componentDidMount();
+          } catch (e) {
+            console.error(e);
+          }
+        } else {
+          try {
+            this.logic.componentDidUpdate(prevProps);
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+      componentWillUnmount() {
+        registry.get(this.__name).subs.delete(this.__sub);
+        if (!this.__needsDidMount) {
+          try {
+            this.logic.componentWillUnmount();
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+      render() {
+        const r = registry.get(this.__name);
+        const cls = "sc-host" + (r.htmlStreaming ? " sc-streaming-html" : "") + (r.jsStreaming ? " sc-streaming-js" : "");
+        const hintStyle = r.htmlStreaming ? hintToMin(this.props.__hintSize) : void 0;
+        const hostStyle = this.props.__hostStyle || hintStyle ? { ...hintStyle || {}, ...this.props.__hostStyle || {} } : void 0;
+        const hostBase = {
+          className: cls,
+          style: hostStyle,
+          "data-sc-name": this.__name,
+          "data-dc-tpl": this.props.__tplId
+        };
+        const chain = Array.isArray(this.context) ? this.context : [];
+        if (chain.includes(this.__name)) {
+          const cycle = [
+            ...chain.slice(chain.indexOf(this.__name)),
+            this.__name
+          ].join(" \u2192 ");
+          return h(
+            "div",
+            { ...hostBase, className: cls + " sc-has-error" },
+            h(Placeholder, {
+              name: this.__name,
+              hintSize: this.props.__hintSize,
+              error: "circular import: " + cycle
+            })
+          );
+        }
+        if (this.state.__err) {
+          return h(
+            "div",
+            { ...hostBase, className: cls + " sc-has-error" },
+            h(
+              "div",
+              { className: "sc-logic-error", "data-omelette-chrome": "" },
+              this.__name + ": " + this.state.__err
+            ),
+            h(Placeholder, {
+              name: this.__name,
+              hintSize: this.props.__hintSize,
+              error: this.state.__err
+            })
+          );
+        }
+        this.__reconcileLogic();
+        if (!r.tpl) {
+          return h(
+            "div",
+            hostBase,
+            h(Placeholder, { name: this.__name, hintSize: this.props.__hintSize })
+          );
+        }
+        const userProps = this.__userProps();
+        this.logic.props = userProps;
+        let vals = userProps;
+        let renderErr = r.logicError || this.__ctorError;
+        try {
+          vals = { ...userProps, ...this.logic.renderVals() || {} };
+        } catch (e) {
+          console.error(e);
+          renderErr = this.__name + ".renderVals(): " + (e instanceof Error && e.message ? e.message : String(e));
+        }
+        this.__streamingNow = !!(r.htmlStreaming || r.jsStreaming);
+        this.__htmlStreamingNow = !!r.htmlStreaming;
+        return h(
+          "div",
+          { ...hostBase, className: cls + (renderErr ? " sc-has-error" : "") },
+          renderErr && h(
+            "div",
+            { className: "sc-logic-error", "data-omelette-chrome": "" },
+            renderErr
+          ),
+          h(
+            AncestorContext.Provider,
+            { value: [...chain, this.__name] },
+            r.tpl(vals, this)
+          )
+        );
+      }
+    }
+    __publicField(StreamableComponent, "contextType", AncestorContext);
+    const named = /* @__PURE__ */ new Map();
+    function getDC(name) {
+      const hit = named.get(name);
+      if (hit) return hit;
+      function Dispatcher(p) {
+        const [, setTick] = React.useState(0);
+        React.useEffect(() => {
+          const sub = () => setTick((n) => n + 1);
+          registry.get(name).subs.add(sub);
+          return () => {
+            registry.get(name).subs.delete(sub);
+          };
+        }, []);
+        ensureFetched(name);
+        return h(StreamableComponent, { ...p, __name: name });
+      }
+      Dispatcher.displayName = name;
+      named.set(name, Dispatcher);
+      return Dispatcher;
+    }
+    return {
+      getDC,
+      StreamableComponent
+    };
+  }
+
+  // src/external.ts
+  var isCustomElementName = (n) => !n.includes(".") && n.includes("-");
+  function isRenderableType(g) {
+    if (typeof g === "function") return !isElementClass(g);
+    return typeof g === "object" && g !== null && typeof g.$$typeof === "symbol";
+  }
+  function resolveDottedPath(root, name) {
+    let cur = root;
+    for (const seg of name.split(".")) {
+      if (cur == null) return void 0;
+      cur = cur[seg];
+    }
+    return cur;
+  }
+  var BABEL_URL = "https://unpkg.com/@babel/standalone@7.29.0/babel.min.js";
+  var BABEL_SRI = "sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y";
+  var GLOBAL_POLL_INTERVAL_MS = 50;
+  var GLOBAL_POLL_TIMEOUT_MS = 3e4;
+  function createExternalModules(onResolved) {
+    const cache = /* @__PURE__ */ new Map();
+    let babelLoading = null;
+    const reportedMissing = /* @__PURE__ */ new Map();
+    const polling = /* @__PURE__ */ new Set();
+    function ensureBabel() {
+      if (window.Babel) return Promise.resolve();
+      if (babelLoading) return babelLoading;
+      babelLoading = new Promise((res, rej) => {
+        const s = document.createElement("script");
+        s.src = BABEL_URL;
+        s.integrity = BABEL_SRI;
+        s.crossOrigin = "anonymous";
+        s.onload = () => res();
+        s.onerror = rej;
+        document.head.appendChild(s);
+      });
+      return babelLoading;
+    }
+    const pending = /* @__PURE__ */ new Map();
+    function load(kind, url, after) {
+      const existing = pending.get(url);
+      if (existing) return existing;
+      cache.set(url, null);
+      console.info("[dc-runtime] x-import: loading", url, "(" + kind + ")");
+      const ready = Promise.all([
+        kind === "jsx" ? ensureBabel() : Promise.resolve(),
+        after ?? Promise.resolve()
+      ]);
+      const p = ready.then(() => fetch(url)).then((r) => {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.text();
+      }).then((src) => {
+        const code = kind === "jsx" ? window.Babel.transform(src, {
+          filename: url,
+          presets: ["react", "typescript"]
+        }).code : src;
+        const module = { exports: {} };
+        const before = new Set(Object.keys(window));
+        //! nosemgrep: eval-and-function-constructor
+        new Function("React", "module", "exports", "require", code)(
+          getReact(),
+          module,
+          module.exports,
+          () => ({})
+        );
+        const globals = {};
+        for (const k of Object.keys(window)) {
+          if (!before.has(k) && typeof window[k] === "function") {
+            globals[k] = window[k];
+          }
+        }
+        cache.set(url, { mod: module.exports, globals });
+        console.info(
+          "[dc-runtime] x-import: loaded",
+          url,
+          "\u2014 exports:",
+          Object.keys(module.exports),
+          "window globals:",
+          Object.keys(globals)
+        );
+        onResolved();
+      }).catch((e) => {
+        cache.set(url, {
+          mod: {},
+          globals: {},
+          error: "failed to load: " + (e instanceof Error && e.message ? e.message : String(e))
+        });
+        console.error(
+          "[dc-runtime] x-import: FAILED to load",
+          url,
+          "(" + kind + ")",
+          e
+        );
+        onResolved();
+      });
+      pending.set(url, p);
+      return p;
+    }
+    function resolve2(url, name) {
+      const entry = cache.get(url);
+      if (!entry) return null;
+      const { mod, globals } = entry;
+      const C = mod && mod[name] || globals && globals[name] || typeof window !== "undefined" && window[name] || mod && mod.default;
+      if (typeof C === "function") return C;
+      const key = url + "\0" + name;
+      if (!reportedMissing.has(key)) {
+        reportedMissing.set(
+          key,
+          entry.error || 'no export named "' + name + '" (has: ' + Object.keys(mod).join(", ") + ")"
+        );
+        console.error(
+          "[dc-runtime] x-import: module",
+          url,
+          "loaded but has no component named",
+          JSON.stringify(name),
+          "\u2014 available exports:",
+          Object.keys(mod),
+          "window globals:",
+          Object.keys(globals),
+          ". The module must `module.exports = {" + name + "}` or set `window." + name + "`."
+        );
+      }
+      return null;
+    }
+    function waitForGlobal(name) {
+      if (polling.has(name)) return;
+      polling.add(name);
+      const started = Date.now();
+      const isCE = isCustomElementName(name);
+      const tick = () => {
+        const found = isCE ? customElements.get(name) : isRenderableType(resolveDottedPath(window, name));
+        if (found) {
+          polling.delete(name);
+          onResolved();
+          return;
+        }
+        if (Date.now() - started >= GLOBAL_POLL_TIMEOUT_MS) {
+          console.warn(
+            "[dc-runtime] x-import: global",
+            JSON.stringify(name),
+            "never appeared on window after " + GLOBAL_POLL_TIMEOUT_MS + "ms"
+          );
+          return;
+        }
+        setTimeout(tick, GLOBAL_POLL_INTERVAL_MS);
+      };
+      setTimeout(tick, GLOBAL_POLL_INTERVAL_MS);
+    }
+    function resolveGlobal(url, name) {
+      const isCE = isCustomElementName(name);
+      if (!url) {
+        if (isCE) {
+          if (customElements.get(name)) return name;
+          waitForGlobal(name);
+          return null;
+        }
+        const g2 = resolveDottedPath(window, name);
+        if (isRenderableType(g2)) return g2;
+        waitForGlobal(name);
+        return null;
+      }
+      const entry = cache.get(url);
+      if (!entry) return null;
+      if (isCE && customElements.get(name)) return name;
+      const g = entry.globals[name] ?? resolveDottedPath(window, name);
+      if (isRenderableType(g)) return g;
+      if (name.includes(".")) return null;
+      const key = url + "\0global\0" + name;
+      if (!reportedMissing.has(key)) {
+        reportedMissing.set(key, null);
+        if (isCE && !customElements.get(name)) {
+          console.warn(
+            "[dc-runtime] x-import:",
+            url,
+            "loaded but no custom element",
+            JSON.stringify(name),
+            "is registered and window." + name + " is not a function \u2014 rendering <" + name + "> as an unknown element."
+          );
+        }
+      }
+      return name;
+    }
+    function getError(url, name) {
+      const entry = cache.get(url);
+      if (entry?.error) return entry.error;
+      return reportedMissing.get(url + "\0" + name) || null;
+    }
+    return { load, resolve: resolve2, resolveGlobal, getError };
+  }
+  function isElementClass(g) {
+    try {
+      return typeof g === "function" && typeof HTMLElement !== "undefined" && g.prototype instanceof HTMLElement;
+    } catch {
+      return false;
+    }
+  }
+
+  // src/atomics.ts
+  var ATOMIC_CSS = (
+    // layout
+    ".fx{display:flex}.col{display:flex;flex-direction:column}.grid{display:grid}.ac{align-items:center}.jc{justify-content:center}.jb{justify-content:space-between}.f1{flex:1}.noshrink{flex-shrink:0}.wrap{flex-wrap:wrap}.fw5{font-weight:500}.fw6{font-weight:600}.fw7{font-weight:700}.fw8{font-weight:800}.fs11{font-size:11px}.fs12{font-size:12px}.fs13{font-size:13px}.fs14{font-size:14px}.fs15{font-size:15px}.fs16{font-size:16px}.fs20{font-size:20px}.fs22{font-size:22px}.upper{text-transform:uppercase}.tc{text-align:center}.nowrap{white-space:nowrap}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}.gap16{gap:16px}.gap24{gap:24px}.m0{margin:0}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}.posrel{position:relative}.posabs{position:absolute}.round{border-radius:50%}.ohide{overflow:hidden}.bbox{box-sizing:border-box}.pointer{cursor:pointer}.w100{width:100%}.b0{border:none}"
+  );
+
+  // src/helmet.ts
+  var DESIGN_DOC_MODE_RE = /<meta\b[^>]*\bname\s*=\s*["']design_doc_mode["'][^>]*\b(?:content|value)\s*=\s*["'](\w+)["']/i;
+  var CANVAS_BG_LIGHT = "#f0eee6";
+  var CANVAS_BG_DARK = "#2e2c26";
+  function createHelmetManager(doc, isStreaming) {
+    const mounted = /* @__PURE__ */ new Set();
+    const live = /* @__PURE__ */ new Map();
+    let designDocMode = null;
+    let canvasStyleEl = null;
+    let appTheme = "light";
+    try {
+      const ds = doc.documentElement.dataset.theme;
+      appTheme = ds === "dark" || ds === "light" ? ds : new URLSearchParams(doc.defaultView?.location.search ?? "").get(
+        "theme"
+      ) === "dark" ? "dark" : "light";
+    } catch {
+    }
+    function applyCanvasBg() {
+      if (!canvasStyleEl) return;
+      const bg = appTheme === "dark" ? CANVAS_BG_DARK : CANVAS_BG_LIGHT;
+      canvasStyleEl.textContent = `html,body{background:${bg}}#dc-root>.sc-host{position:relative}`;
+    }
+    function postDesignMode(mode) {
+      if (window.parent === window) return;
+      try {
+        window.parent.postMessage({ type: "__dc_design_mode", mode }, "*");
+      } catch {
+      }
+    }
+    function setDesignDocMode(mode) {
+      if (mode === designDocMode) return;
+      designDocMode = mode;
+      postDesignMode(mode);
+      if (mode === "canvas") {
+        doc.documentElement.setAttribute("data-dc-canvas", "");
+        canvasStyleEl = doc.createElement("style");
+        canvasStyleEl.setAttribute("data-dc-canvas", "");
+        applyCanvasBg();
+        doc.head.appendChild(canvasStyleEl);
+      } else {
+        doc.documentElement.removeAttribute("data-dc-canvas");
+        canvasStyleEl?.remove();
+        canvasStyleEl = null;
+      }
+    }
+    window.addEventListener("message", (e) => {
+      const type = e.data && e.data.type;
+      if (type === "__dc_theme") {
+        const t = e.data.theme;
+        if (t === "light" || t === "dark") {
+          appTheme = t;
+          doc.documentElement.dataset.theme = t;
+          applyCanvasBg();
+        }
+        return;
+      }
+      if (!designDocMode || type !== "__dc_probe") return;
+      postDesignMode(designDocMode);
+    });
+    function compile(node) {
+      const raw = [...node.children];
+      const helmetClosed = node.nextSibling != null || node.parentNode?.nextSibling != null;
+      if (node.hasAttribute("data-dc-atomics") && !mounted.has("__dc-atomics")) {
+        mounted.add("__dc-atomics");
+        const el = doc.createElement("style");
+        el.id = "__dc-atomics";
+        el.textContent = ATOMIC_CSS;
+        doc.head.appendChild(el);
+      }
+      return (_vals, ctx) => {
+        const name = ctx && ctx.__name || "";
+        const streaming = !!(name && isStreaming(name));
+        for (let i = 0; i < raw.length; i++) {
+          const child = raw[i];
+          const tag = child.tagName;
+          const mayBePartial = streaming && !helmetClosed && i === raw.length - 1;
+          if (tag === "SCRIPT") {
+            if (mayBePartial) continue;
+            const key = "SCRIPT|" + (child.getAttribute("src") || child.textContent || "");
+            if (mounted.has(key)) continue;
+            mounted.add(key);
+            const el = doc.createElement("script");
+            for (const { name: an, value } of [...child.attributes])
+              el.setAttribute(an, value);
+            if (child.textContent) el.textContent = child.textContent;
+            doc.head.appendChild(el);
+          } else if (tag === "LINK" || tag === "META") {
+            if (mayBePartial) continue;
+            const key = tag + "|" + (child.getAttribute("href") || child.getAttribute("src") || child.outerHTML);
+            if (mounted.has(key)) continue;
+            mounted.add(key);
+            doc.head.appendChild(child.cloneNode(true));
+          } else {
+            const key = name + "|" + i;
+            let el = live.get(key);
+            if (!el || el.tagName !== tag) {
+              if (el) el.remove();
+              el = doc.createElement(tag.toLowerCase());
+              live.set(key, el);
+              doc.head.appendChild(el);
+            }
+            for (const { name: an, value } of [...child.attributes]) {
+              if (el.getAttribute(an) !== value) el.setAttribute(an, value);
+            }
+            if (el.textContent !== child.textContent)
+              el.textContent = child.textContent;
+          }
+        }
+        return null;
+      };
+    }
+    return { compile, setDesignDocMode };
+  }
+
+  // src/pseudo.ts
+  function createPseudoSheet(doc) {
+    let el = null;
+    const cache = /* @__PURE__ */ new Map();
+    let n = 0;
+    return (pseudo, css) => {
+      const k = pseudo + "|" + css;
+      const hit = cache.get(k);
+      if (hit) return hit;
+      if (!el) {
+        el = doc.createElement("style");
+        doc.head.appendChild(el);
+      }
+      const cls = "scp" + (n++).toString(36);
+      const sel = pseudo === "before" || pseudo === "after" ? "." + cls + "::" + pseudo : "." + cls + ":" + pseudo;
+      el.sheet.insertRule(sel + "{" + css + "}", el.sheet.cssRules.length);
+      cache.set(k, cls);
+      return cls;
+    };
+  }
+
+  // src/registry.ts
+  function createRegistry() {
+    const entries = /* @__PURE__ */ Object.create(null);
+    function get(name) {
+      return entries[name] || (entries[name] = {
+        html: "",
+        tpl: null,
+        Logic: null,
+        jsStreaming: false,
+        htmlStreaming: false,
+        ver: 0,
+        subs: /* @__PURE__ */ new Set(),
+        fetched: false
+      });
+    }
+    function bump(name) {
+      const r = get(name);
+      r.ver++;
+      for (const fn of r.subs) fn();
+    }
+    return {
+      entries,
+      get,
+      bump,
+      bumpAll() {
+        for (const n in entries) bump(n);
+      }
+    };
+  }
+
+  // src/runtime.ts
+  var COMPONENT_DIR = ".";
+  function createRuntime(doc = document) {
+    const registry = createRegistry();
+    const pseudoClass = createPseudoSheet(doc);
+    const helmet = createHelmetManager(
+      doc,
+      (name) => registry.get(name).htmlStreaming
+    );
+    const external = createExternalModules(() => registry.bumpAll());
+    const factory = createComponentFactory(registry, ensureFetched);
+    const host = {
+      component: (name) => factory.getDC(name),
+      placeholder: (props) => h(Placeholder, props),
+      helmet: (node) => helmet.compile(node),
+      loadExternal: (kind, url, after) => external.load(kind, url, after),
+      resolveExternal: (url, name) => external.resolve(url, name),
+      resolveExternalGlobal: (url, name) => external.resolveGlobal(url, name),
+      resolveExternalError: (url, name) => external.getError(url, name),
+      pseudoClass
+    };
+    function ensureFetched(name) {
+      const r = registry.get(name);
+      if (r.fetched) return;
+      r.fetched = true;
+      const url = COMPONENT_DIR + "/" + encodeURIComponent(name) + ".dc.html";
+      fetch(url).then((res) => {
+        if (!res.ok) {
+          console.error(
+            "[dc-runtime] sibling fetch for <" + name + "/> failed:",
+            url,
+            "returned",
+            res.status,
+            "\u2014 the reference renders as an empty placeholder."
+          );
+          return "";
+        }
+        return res.text();
+      }).then((t) => {
+        if (!t) return;
+        const parsed = parseDcText(t);
+        if (!parsed) {
+          console.error(
+            "[dc-runtime] sibling fetch for <" + name + "/>:",
+            url,
+            "has no  block \u2014 not a Design Component."
+          );
+          return;
+        }
+        if (parsed.props) r.propsMeta = parsed.props;
+        if (parsed.preview) r.preview = parsed.preview;
+        if (parsed.template && !r.html) updateHtml(name, parsed.template);
+        if (parsed.js && !r.Logic) updateJs(name, parsed.js);
+      }).catch(
+        (e) => console.error(
+          "[dc-runtime] sibling fetch for <" + name + "/> threw:",
+          url,
+          e
+        )
+      );
+    }
+    let rootName = null;
+    function updateHtml(name, html) {
+      const r = registry.get(name);
+      r.html = html;
+      if (name === rootName) {
+        const mode = DESIGN_DOC_MODE_RE.exec(html)?.[1] ?? null;
+        if (mode || !r.htmlStreaming) helmet.setDesignDocMode(mode);
+      }
+      try {
+        r.tpl = compileTemplate(html, host);
+      } catch (e) {
+        console.error("[dc-runtime] template compile FAILED for", name, e);
+      }
+      registry.bump(name);
+    }
+    function updateJs(name, src) {
+      const r = registry.get(name);
+      const seq = r.jsSeq = (r.jsSeq || 0) + 1;
+      try {
+        const Cls = evalDcLogic(src);
+        if (r.jsSeq !== seq) return;
+        if (typeof Cls !== "function") {
+          r.logicError = name + ".dc.html: <script data-dc-script> must define `class Component extends DCLogic`";
+        } else {
+          r.logicError = null;
+          r.Logic = Cls;
+        }
+      } catch (e) {
+        if (r.jsSeq !== seq) return;
+        console.error(
+          "[dc-runtime] logic class eval FAILED for",
+          name,
+          "\u2014 the template renders with props only.",
+          e
+        );
+        r.logicError = name + ": " + (e instanceof Error && e.message ? e.message : String(e));
+      }
+      registry.bump(name);
+    }
+    function setStreaming(name, kind, on) {
+      const r = registry.get(name);
+      if (kind === "html") r.htmlStreaming = !!on;
+      else r.jsStreaming = !!on;
+      let any = false;
+      for (const n in registry.entries) {
+        const e = registry.entries[n];
+        if (e && (e.htmlStreaming || e.jsStreaming)) {
+          any = true;
+          break;
+        }
+      }
+      doc.documentElement.classList.toggle("sc-dc-streaming", any);
+      registry.bump(name);
+    }
+    function dcUpdate(name, kind, content, streaming) {
+      if (streaming) registry.get(name).fetched = true;
+      if (kind === "html") {
+        setStreaming(name, "html", !!streaming);
+        updateHtml(name, content);
+      } else if (kind === "js") {
+        setStreaming(name, "js", !!streaming);
+        if (!streaming) updateJs(name, content);
+      } else if (kind === "props") {
+        const { props, preview } = parseDataProps(content);
+        const r = registry.get(name);
+        r.propsMeta = props ?? void 0;
+        r.preview = preview;
+        registry.bump(name);
+      }
+    }
+    function setProps(name, overrides) {
+      registry.get(name).propOverrides = overrides && typeof overrides === "object" ? { ...overrides } : null;
+      registry.bump(name);
+    }
+    function adoptParsed(name, parsed) {
+      if (!parsed) return;
+      const r = registry.get(name);
+      if (parsed.props) r.propsMeta = parsed.props;
+      if (parsed.preview) r.preview = parsed.preview;
+      if (parsed.template) updateHtml(name, parsed.template);
+      if (parsed.js) updateJs(name, parsed.js);
+    }
+    return {
+      registry,
+      getDC: factory.getDC,
+      updateHtml,
+      updateJs,
+      dcUpdate,
+      setProps,
+      adoptParsed,
+      setRootName: (name) => {
+        rootName = name;
+      },
+      markFetched: (name) => {
+        registry.get(name).fetched = true;
+      },
+      annotatedTemplate: (name) => {
+        const r = registry.get(name);
+        return r.tpl && r.tpl.__annotated || null;
+      },
+      templateSource: (name) => registry.get(name).html || null,
+      StreamableLogic
+    };
+  }
+
+  // src/stream-state.ts
+  function createStreamTracker(staleMs = 6e4, now = Date.now) {
+    const since = /* @__PURE__ */ new Map();
+    const liveOne = (n) => {
+      const t = since.get(n);
+      if (t === void 0) return false;
+      if (now() - t > staleMs) {
+        since.delete(n);
+        return false;
+      }
+      return true;
+    };
+    return {
+      push(name, streaming, viewportKey) {
+        if (viewportKey === "dc-model") return;
+        if (streaming) since.set(name, now());
+        else since.delete(name);
+      },
+      live(name) {
+        if (name !== void 0) return liveOne(name);
+        for (const n of [...since.keys()]) if (liveOne(n)) return true;
+        return false;
+      }
+    };
+  }
+
+  // src/index.ts
+  var REACT_URL = "https://unpkg.com/react@18.3.1/umd/react.production.min.js";
+  var REACT_SRI = "sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z";
+  var REACT_DOM_URL = "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js";
+  var REACT_DOM_SRI = "sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1";
+  function hideRawTemplate() {
+    const s = document.createElement("style");
+    s.textContent = "x-dc{display:none!important}";
+    document.head.appendChild(s);
+  }
+  function loadScript(src, integrity) {
+    return new Promise((resolve2, reject) => {
+      //! nosemgrep: create-script-element
+      const s = document.createElement("script");
+      s.src = src;
+      s.integrity = integrity;
+      s.crossOrigin = "anonymous";
+      s.async = false;
+      s.onload = () => resolve2();
+      s.onerror = () => reject(new Error(`failed to load ${src}`));
+      document.head.appendChild(s);
+    });
+  }
+  function loadReactUmd() {
+    const w = window;
+    if (w.React && w.ReactDOM) return Promise.resolve();
+    return Promise.all([
+      loadScript(REACT_URL, REACT_SRI),
+      loadScript(REACT_DOM_URL, REACT_DOM_SRI)
+    ]).then(() => void 0);
+  }
+  function init() {
+    const runtime = createRuntime(document);
+    let rootName = "Root";
+    const baseCss = document.createElement("style");
+    baseCss.textContent = BASE_CSS;
+    document.head.prepend(baseCss);
+    const notifyHost = () => {
+      if (window.parent === window) return;
+      const r = runtime.registry.entries[rootName];
+      try {
+        window.parent.postMessage(
+          {
+            type: "__dc_booted",
+            rootName,
+            propsMeta: r && r.propsMeta || null,
+            preview: r && r.preview || null
+          },
+          "*"
+        );
+      } catch {
+      }
+    };
+    const streams = createStreamTracker();
+    const api = {
+      __dcUpdate: (name, kind, content, streaming, viewportKey) => {
+        streams.push(name, streaming, viewportKey);
+        runtime.dcUpdate(name, kind, content, streaming);
+        if (name === rootName && !streaming && kind === "props") notifyHost();
+      },
+      __dcStreaming: (name) => streams.live(name),
+      __dcSetProps: (name, overrides) => runtime.setProps(name, overrides),
+      /** Name of the component currently mounted as the page root — DC tools
+       *  push their template-stream here when targeting "the open page". */
+      __dcRootName: () => rootName,
+      /** Editor bridge — the encoded, `data-dc-tpl`-annotated template source.
+       *  The host editor parses this into its own template DOM so it can map a
+       *  rendered node (carrying the same `data-dc-tpl`) back to the source
+       *  node that emitted it. Returns the encoded form (`<sc-comp>`,
+       *  `sc-camel-*` attrs); the editor decodes on serialize. */
+      __dcAnnotatedTemplate: (name) => runtime.annotatedTemplate(name),
+      /** Editor bridge — the *original* (decoded) template source. */
+      __dcTemplateSource: (name) => runtime.templateSource(name),
+      __dcBoot: () => {
+        rootName = boot(runtime, document) ?? rootName;
+        notifyHost();
+      },
+      __dcRegistry: runtime.registry.entries,
+      getDC: (name) => runtime.getDC(name),
+      // `DCLogic` is the documented base class name; `StreamableLogic` is the
+      // implementation alias kept for any project that already references it.
+      DCLogic: runtime.StreamableLogic,
+      StreamableLogic: runtime.StreamableLogic
+    };
+    Object.assign(window, api);
+    window.__dcContentKeyed = true;
+    if (document.readyState !== "loading") api.__dcBoot();
+    else document.addEventListener("DOMContentLoaded", () => api.__dcBoot());
+  }
+  hideRawTemplate();
+  loadReactUmd().then(init).catch((err) => {
+    console.error("[dc] failed to load React or boot:", err);
+    throw err;
+  });
+})();
+</script>
+
+<style>
+[data-anim] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.65s ease, transform 0.65s ease;
+}
+[data-anim="left"] { transform: translateX(-32px); }
+[data-anim="right"] { transform: translateX(32px); }
+[data-anim].in, .stagger.in > * {
+  opacity: 1 !important;
+  transform: none !important;
+}
+.stagger > * {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.stagger > *:nth-child(1) { transition-delay: 0.05s; }
+.stagger > *:nth-child(2) { transition-delay: 0.15s; }
+.stagger > *:nth-child(3) { transition-delay: 0.25s; }
+.stagger > *:nth-child(4) { transition-delay: 0.35s; }
+.stagger > *:nth-child(5) { transition-delay: 0.45s; }
+/* Fallback если JS отключён или IntersectionObserver не поддерживается */
+@media (prefers-reduced-motion: reduce) {
+  [data-anim], .stagger > * {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+</style>
+
+  <script type="module" src="https://homereserve.ru/widget.js"></script>
+  <script type="module">
+    const _TOKEN = 'GdXT9Gz4Mv';
+    let _tries = 0;
+    const _initHR = () => {
+      const hr = window.homereserve;
+      if (hr && hr.initWidgetSearch && hr.initWidgetList) {
+        try { hr.initWidgetSearch({ token: _TOKEN, instance_id: 'search' }); } catch(e) {}
+        /* каталог живёт на странице booking.html */
+        return;
+      }
+      if (_tries++ < 100) setTimeout(_initHR, 200);
+    };
+    document.addEventListener("DOMContentLoaded", () => setTimeout(_initHR, 600));
+  </script>
+
+<title>Контакты — NovaHome · Nest One, Ташкент</title>
+<meta name="description" content="Контакты NovaHome: телефоны, Telegram, WhatsApp, Instagram и карта. Поддержка 24/7.">
+<style id="nv-ui">
+/* ===== ПАТЧ 2: карусель, языки, попап, светлый футер ===== */
+  nav a, .nav-links a{white-space:nowrap}
+  .apt-car{position:relative;margin-bottom:44px}
+  .apt-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;border-radius:20px}
+  .apt-track::-webkit-scrollbar{display:none}
+  .apt-slide{position:relative;flex:0 0 100%;scroll-snap-align:center;height:min(68vh,620px);min-height:420px;overflow:hidden;border-radius:20px}
+  .apt-slide img{width:100%;height:100%;object-fit:cover;display:block}
+  .apt-veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,15,10,.06) 40%,rgba(20,15,10,.55) 100%)}
+  .apt-panel{position:absolute;left:22px;bottom:22px;right:22px;max-width:460px;background:rgba(255,255,255,.94);
+    backdrop-filter:blur(8px);border-radius:16px;padding:20px 22px;box-shadow:0 18px 44px rgba(30,22,14,.28)}
+  .apt-nm{font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:22px;color:#1C1815}
+  .apt-sub{font:500 13.5px Manrope,sans-serif;color:#857a6b;margin-top:4px}
+  .apt-pr{font:400 13px Manrope,sans-serif;color:#857a6b;margin-top:10px}
+  .apt-pr b{font:800 18px Manrope,sans-serif;color:#1C1815}
+  .apt-cta{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .apt-book{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:12px;
+    padding:12px 20px;font:700 14px Manrope,sans-serif;color:#fff;
+    background:linear-gradient(135deg,#FF9D2E 0%,#FB7A1E 52%,#EE5A12 100%);
+    box-shadow:0 10px 24px -8px rgba(251,122,30,.55);transition:transform .25s cubic-bezier(.16,.84,.3,1)}
+  .apt-book:hover{transform:translateY(-2px)}
+  .apt-call{display:inline-flex;align-items:center;gap:8px;text-decoration:none;border-radius:12px;
+    padding:12px 16px;font:700 13.5px Manrope,sans-serif;color:#1C1815;border:1px solid rgba(28,24,21,.2);
+    transition:transform .25s cubic-bezier(.16,.84,.3,1),border-color .25s}
+  .apt-call:hover{transform:translateY(-2px);border-color:var(--accent,#A67C4E)}
+  .apt-nav{position:absolute;top:calc(50% - 24px);width:48px;height:48px;border-radius:50%;border:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.94);color:#1C1815;
+    box-shadow:0 10px 26px rgba(30,22,14,.3);transition:transform .2s cubic-bezier(.16,.84,.3,1)}
+  .apt-nav:hover{transform:scale(1.07)}
+  .apt-prev{left:16px}.apt-next{right:16px}
+  .apt-dots{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:7px}
+  .apt-dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.5);transition:background .2s,transform .2s}
+  .apt-dots span.on{background:#fff;transform:scale(1.25)}
+  @media(max-width:767px){
+    .apt-slide{height:66vh}
+    .apt-panel{left:12px;right:12px;bottom:12px;padding:16px}
+    .apt-nav{width:40px;height:40px;top:auto;bottom:88px}
+    .apt-dots{display:none}
+  }
+  .langdd{position:relative}
+  .langdd-btn{display:inline-flex;align-items:center;gap:7px;cursor:pointer;border:1px solid rgba(255,255,255,.35);
+    background:rgba(255,255,255,.12);color:inherit;border-radius:999px;padding:8px 14px;font:700 12.5px Manrope,sans-serif}
+  .nav.scrolled .langdd-btn{border-color:rgba(28,24,21,.2)}
+  .langdd-panel{position:absolute;right:0;top:calc(100% + 10px);z-index:60;display:flex;flex-direction:column;min-width:160px;
+    background:#fff;border:1px solid rgba(28,24,21,.1);border-radius:16px;box-shadow:0 20px 50px rgba(30,22,14,.22);padding:6px;gap:2px;
+    opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-8px) scale(.97);transform-origin:top right;
+    transition:opacity .25s cubic-bezier(.16,.84,.3,1),transform .25s cubic-bezier(.16,.84,.3,1),visibility 0s .25s}
+  .langdd-panel.open{opacity:1;visibility:visible;pointer-events:auto;transform:none;transition-delay:0s}
+  .langdd-btn svg{transition:transform .25s cubic-bezier(.16,.84,.3,1)}
+  .langdd-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+  .langdd-btn{transition:background .25s,border-color .25s}
+  .langdd-btn:hover{background:rgba(255,255,255,.22)}
+  .nav.scrolled .langdd-btn:hover{background:rgba(28,24,21,.07)}
+  .langdd-panel button{border:none;background:transparent;cursor:pointer;text-align:left;border-radius:9px;
+    padding:9px 12px;font:600 13.5px Manrope,sans-serif;color:#1C1815}
+  .langdd-panel button:hover{background:rgba(166,124,78,.1)}
+  .langdd-panel button.active{background:var(--accent,#A67C4E);color:#fff}
+  /* светлый футер: переопределение блоков этапа 1 */
+  .foot-phone{color:#1C1815}
+  .foot-phone i, .foot-phone svg{color:var(--accent,#A67C4E)}
+  .foot-phone small{color:rgba(28,24,21,.45)}
+  .pay-row{gap:12px}
+  .pay-logo{display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:10px;
+    background:#fff;border:1px solid rgba(28,24,21,.14);box-shadow:0 4px 14px rgba(30,22,14,.06)}
+  .wu-sq{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;
+    background:#FFDD00;font:900 12px Manrope,sans-serif;color:#000}
+  .soc-row a{background:rgba(28,24,21,.05);border:1px solid rgba(28,24,21,.14);color:#1C1815}
+  .soc-row a:hover{background:var(--accent,#A67C4E);color:#fff}
+  .plat-logo{display:inline-flex;align-items:center;gap:9px;text-decoration:none;
+    font:800 19px Manrope,sans-serif;opacity:.9;transition:opacity .25s,transform .25s cubic-bezier(.16,.84,.3,1)}
+  .plat-logo:hover{opacity:1;transform:translateY(-2px)}
+  .bk-sq{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;
+    background:#003580;color:#fff;font:900 15px Manrope,sans-serif}
+  /* попап -5% */
+  #promo5{position:fixed;z-index:90;left:18px;bottom:18px;width:min(330px,calc(100vw - 36px));
+    background:#fff;border-radius:18px;padding:20px 20px 18px;box-shadow:0 26px 70px rgba(30,22,14,.35);
+    border-top:4px solid var(--accent,#A67C4E);
+    opacity:0;transform:translateY(18px);pointer-events:none;transition:opacity .35s cubic-bezier(.16,.84,.3,1),transform .35s cubic-bezier(.16,.84,.3,1)}
+  #promo5.on{opacity:1;transform:none;pointer-events:auto}
+  #promo5x{position:absolute;top:8px;right:10px;border:none;background:transparent;cursor:pointer;
+    font:400 22px/1 Manrope,sans-serif;color:#a99f90;padding:4px}
+  .p5-badge{display:inline-flex;padding:5px 11px;border-radius:999px;background:rgba(166,124,78,.12);
+    color:var(--accent,#A67C4E);font:800 13px Manrope,sans-serif;margin-bottom:10px}
+  .p5-t{font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:17px;line-height:1.2;color:#1C1815}
+  .p5-d{font:400 13px/1.55 Manrope,sans-serif;color:#857a6b;margin-top:7px}
+  .p5-cta{display:flex;justify-content:center;margin-top:14px;text-decoration:none;border-radius:12px;
+    padding:12px;font:700 14px Manrope,sans-serif;color:#fff;
+    background:linear-gradient(135deg,#FF9D2E 0%,#FB7A1E 52%,#EE5A12 100%)}
+</style>
+<style id="nv-pages">
+  body{margin:0;background:#FBF7F0;color:#1C1815;font-family:Manrope,sans-serif}
+  .pg-main{max-width:1180px;margin:0 auto;padding:132px 24px 90px}
+  @media(min-width:768px){.pg-main{padding:150px 48px 110px}}
+  .pg-eyebrow{font:700 12px Manrope,sans-serif;letter-spacing:.28em;text-transform:uppercase;color:var(--accent,#A67C4E);margin-bottom:12px}
+  .pg-h1{margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(30px,4.6vw,44px);line-height:1.06;letter-spacing:-.02em}
+  .pg-sub{margin:14px 0 0;max-width:620px;font:400 15.5px/1.7 Manrope,sans-serif;color:#857a6b}
+  .pg-card{margin-top:34px;background:#fff;border:1px solid #ECE2D0;border-radius:18px;box-shadow:0 8px 30px rgba(40,30,20,.06);padding:26px}
+  details.nv{border-bottom:1px solid rgba(28,24,21,.1)}
+  details.nv summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;
+    padding:19px 4px;font:700 16px Manrope,sans-serif;color:#1C1815}
+  details.nv summary::-webkit-details-marker{display:none}
+  details.nv summary::after{content:'+';font:300 26px/1 Manrope,sans-serif;color:var(--accent,#A67C4E);transition:transform .25s cubic-bezier(.16,.84,.3,1);flex:none}
+  details.nv[open] summary::after{transform:rotate(45deg)}
+  details.nv .a{padding:0 4px 20px;max-width:760px;font:400 15px/1.7 Manrope,sans-serif;color:#5d5346}
+  .faq-block{margin-top:38px}
+  .faq-block h2{margin:0 0 6px;font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:23px}
+  .blog-card{margin-top:26px;background:#fff;border:1px solid #ECE2D0;border-radius:18px;box-shadow:0 8px 30px rgba(40,30,20,.06);overflow:hidden}
+  .blog-card .bd{padding:26px}
+  .blog-tag{display:inline-flex;padding:5px 12px;border-radius:999px;background:rgba(166,124,78,.1);color:var(--accent,#A67C4E);font:700 11px Manrope,sans-serif;letter-spacing:.08em;text-transform:uppercase}
+  .blog-card h2{margin:12px 0 8px;font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:23px;line-height:1.15}
+  .blog-card .lead{font:400 15px/1.7 Manrope,sans-serif;color:#5d5346}
+  .blog-card details{margin-top:8px}
+  .blog-card summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;color:var(--accent,#A67C4E);font:700 14px Manrope,sans-serif;padding:8px 0}
+  .blog-card summary::-webkit-details-marker{display:none}
+  .blog-card .art{font:400 15px/1.75 Manrope,sans-serif;color:#3d372e;padding-top:6px}
+  .blog-card .art p{margin:0 0 14px}
+  .ct-grid{display:grid;grid-template-columns:1fr;gap:22px;margin-top:34px}
+  @media(min-width:900px){.ct-grid{grid-template-columns:1fr 1fr}}
+  .ct-item{display:flex;gap:16px;align-items:flex-start;padding:20px;background:#fff;border:1px solid #ECE2D0;border-radius:16px}
+  .ct-item .ic{width:46px;height:46px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(166,124,78,.1);color:var(--accent,#A67C4E)}
+  .ct-item .t{font:800 15.5px Manrope,sans-serif}
+  .ct-item .d{font:400 13.5px/1.6 Manrope,sans-serif;color:#857a6b;margin-top:3px}
+  .ct-item a{color:#1C1815;text-decoration:none;font-weight:700}
+  .ct-item a:hover{color:var(--accent,#A67C4E)}
+</style>
+</head>
+<body>
+<nav class="nav scrolled" style="position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:20px 48px;background:transparent">
+    <a href="index.html" style="display:flex;align-items:center;gap:11px;text-decoration:none;flex:none">
+      <span class="navlogo" style="position:relative;width:34px;height:34px;flex:none;display:flex;align-items:center;justify-content:center"><img class="logo-light" src="data:image/png;base64,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" alt="" style="position:absolute;width:34px;height:34px;object-fit:contain;transition:opacity .5s ease"><img class="logo-dark" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAKSklEQVR42u2ca2xkZR3Gn+c9M9N22jlnzjkzuxQLK8hFBUT0A0gMQggIRMAP4m25BCFcRbJe0ABBSAyJQoKEBAmESwjChnATMYIgkaBGZPkgGMAIcrHZXWlnOtPttjuX8z5+mGl32u1MFxZ2u/D+PnV6Tifv+T/v+/8/7/+cU8DhcDgcDofD4XA4HA6Hw+FwOBwOh8PhcOy+0IVgF1GMgtPiKLhv5crBFct5nObDGPxC6H9dFscCyDfrqfvDMNzLCbDzgv8NASfKS/2IwFsADje09xZyuf2dADsl+OaEpuWaUqm0SZBHaguhg5Ey963I5z/jBPjAg6811Wq10qrAtICBxC0A9rVG90ZR7nAnwAeR84F5wW9jAQsAEFCTMEyZu+M4OMYJ8L4HnwuDD6gd/a3UAcSU7ojzuZOdADtIFPnHCTipafn9dvAX+n4LcO53JBoAmhJ9krfEQXC0E2BHdlni5wxxb7VarcRx/pRi6B8/fwFAHR/TAv4J6GoCMwJ9GhzgBNgRAYiaJZuFIPg8pDusTGbBGcn8z8qWJiZvAXE9gDSIxAmwYxJYCUYpjkC4uVSpPLGgEdFZAxoQDypE/vUiS630NG+F7BJSu3P4LawlTTaTGXhyw4YNv9lGHtikXRbYDnZT4lmUxkDVCcqtgB2a/7CSUhs2bJjuegZgCTQ7JltTQOxs6PuiABJv22tIR5F/ie/7kYREQt3SXk7gjQ4R7NY67QTYgfgzkTQvjRYi/8cUL02n0w0ACag+QOssk7NIzWCZtah3dxeUaME1SCxArV4QAEFMG5mbjE0VIU51CCAsgxqwWxfhBLQ01uvUpGlxdbVaafWCSAuoKfFQULeRGOjYHS+LlZDavVdAkhiZzmvQ/HaEte04NwDkJagj7ytxKWhx4jg4tpDPH7W0D6VV72uwC35ekHISV4QXUsjnj6J0u2jviuPevRoCCQSva/TtNs04b37q8dwK6CSKcoeDulXiEEAfwu1R5B/XPQUxETQXxWKxOLTw+HzTpPXtVWBauwS3AuYoBsFnDcztAortnN2AEBjhtkKYO3HxIowEal1DMfRPULN+RbcURKqf4t0Ermr96dzu2AkQRUOftkZ3ShhGq2c/178ROAjyljifP2XbfS4TEIqiyLfEzaA2L7Sp83bFwv7jE9XbCPxBYsbZUABhGO5lZO8EsEpAbZFTmhKzpL05ioJ0uVx9sNMFydBk0vW+Rs371YqJ6o3j27Qi1N4foAbitEIYVOZmP10zDqQ9UNJBADf3OK0psI/CTYXQT49PTK6d80FiZuPGqXEA15W2yT/WmvmWvyngXAI1UnVp16/+5VEDyGcBbFpiQjQBpATeEOdzZ7SibxoS0t1yOS3sgv2W2iIsm/3PLh+IkU0LfMQAb4q4VWK2HewudRceaK4vRoGX6sven8zMvNPDp9ouR7RcBNjlK4CgSA6MTUw+AekCUFMA0j07EACt8IvGlunV71QqL27nRmyxfYRzQQA0ayXHJzb9HuS5ACrbIYIEXBvH/sU9xE2W0WRfpgIQUkeiLpWqf6R4NoASgMwSs9vC8ppCFKzpnoLYW/yPugDtKdoZJY5XKs+K9iwCG7dDhATAlXEYXLZIirFLxNgJsMhmSABQLm/6GzycCWqUQF8vESQ0SPykEPlXdIppW60IuRTU04Fu7c0sZHy8+oKVt1rQG2RPESShDuCHcRj8dE6ExNol649bARAg060/1N/f/x/Rng7h34T6e4vAGqlL4zD4WVvcRm/x3VMRrcBx8UppDY6v16ePKJenXmFKq0W+TG6XCBfFYXANAK97v4dyKag1C63pYlUINGdvuo+NTb6WSnC6hBdJDSwlAoALAK6RFu0vuRrQ0WBY6ILm2UhPW4/9r1p9Q0ythvj8UiK09wkfxzJnmdSAbmadVgvqQ7lcHmWqcYbAv26HCD1u+8rdD+gohIvXANhFHdLY2PTGdD05C8IzS4gAtwKWpNFVgNajh96iY9w4NTVWT3C2hCcJZd/j/sOtgGbrPa6uNQBe9zFOTk6WxdQ5IB97LyIkToDWRkwSuzsa9RxjuVyepJc5X8BD70EEuhTUYxa23nJceoxjY2NTA4OTF4Fc+y5rgnUCgD1cEKy3nWMcHcVMPqp+D+I9bRF2i/8TsVx6QerikBpLpaBOXnsNtfGJ6hoBt7d3zMtehGVwU55W1J7FfP7Q1pRv1kzT6wcpK+1D4NV3a6tK5cnLCmFQI3WhxEVfRZKUBsmPvACNBibShvuI9gYAgryGjNKAQLLPgn9+D1+bjE9UryxE/jSIk6Btm3Ik0yCqu3wCLoNVSADp/WbHsh+A1zrSSuspuR0plpmeLngZFGLHR4EoivwwDAMAGB4ezkZR5M8eW7lycMWKFYMr2wugz/f9aOuxlYNBEOQBIAiC/OzPnUZiZGRkznqOjGAA7cee4zjOFQq5/YeHh2f3B6nO725/ZwggPTw8nA3DcO98Pr9qdiw7g532fPbgQOaXpH6eTvfdo6RxJqkLZ2ZqD8VhcLUSc4usOS+bHfDrff1jxuDxXF//7zbXapWBjHe/ZzDSPzD4D4963iPOCVLptVP1+nRb2D2btZlvzWypPQ8Aac8/dyjn/Tebzh4o2PMNTTFpNk7JDmbezmb78h7Mw4OZvqena7WJMAwDz9hHh/qzrzZt7XiPOMbQroL18tMztVc+bEU4Z8hPZFL6rsTNlIbiODgawsUiTmPCRNQDTYOXCG1JDI/L5XIPgvySqGuNbZ4E0IpgPWW+DODXbTfjkRzaWs84aK3J08PXmk1dV56olsMw3Nsk+I4RHxbtK0nKfBHA6x6aR0LmTUmepAw83Dk+tun1D6ULEuBJeozgKSReEThtpCMs+EKpVP0TABQi/zkCn5L4iIiTMxlvRlZjpfLkujgKrobwAAFPht+cFcDzvAaS5PBC5F/VrugHJeJfIFQmJyfLADAxMfF2IfLrCVH0gHUGdmQ/oG/CmENo8awkQ5mMEvwgDoMxiOtKlcpvP1QCUOoD8XeJfcbwcklrZc1LoC6J46FPkkyQ8DBL3OWJr1voPEL7gHokl8tFBL4gYH8JJBHFcbxnqVRanyRJmsK67KB/AwDMbN50iZDaZGjzq1ah/623sKX1zjD7QbsJMFOSSpXQ/yqgzYDWy2PaQHUL3VSemPrXznRGO20nLLIGAOm+5EZJYwC88UrlcVCPGXlPy5pnAD61R7n62Fil8jKJ9QAOQMK1mQxOBLBeTE4VvVMhbDRKZt+ckTGcGR0dnRkdHZ0hWfO8WlnEU1OTwRVx6H87k+JlMHo0Zb2Z1lhSzwC4AMBzJBskm629gfeVOM6t7vVWzm5LHMd77jE0VASAMAz3jqJoZM7phOHBK8LwkIXnFwq5AwCwWMzuEUXRxzoc1UixmN2j/THd6WxmXc3ceWF45KyrWbUK/bMuakUQ7AvAFIvFoeHh4Wwul4uL+fyhhSA4rFj093O+1eFwOBwOh8PhcDgcDofD4XA4HA6Hw+FwOByO3Zz/AxXmWK2ExofzAAAAAElFTkSuQmCC" alt="" style="position:absolute;width:34px;height:34px;object-fit:contain;transition:opacity .5s ease"></span>
+      <span class="logo-text" style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:20px;letter-spacing:-.02em">Nova<span style="color:var(--accent,#A67C4E)">Home</span></span>
+    </a>
+    <div style="display:flex;align-items:center;gap:34px">
+      <a class="navlink" href="booking.html" style="text-decoration:none;font:600 14px Manrope,sans-serif">Бронирование</a>
+      <a class="navlink" href="blog.html" style="text-decoration:none;font:600 14px Manrope,sans-serif">Блог</a>
+      <a class="navlink" href="contacts.html" style="text-decoration:none;font:600 14px Manrope,sans-serif">Контакты</a>
+      <a class="navlink" href="faq.html" style="text-decoration:none;font:600 14px Manrope,sans-serif">FAQ</a>
+      <div class="langdd" id="langdd">
+      <button type="button" class="langdd-btn" id="langddBtn" aria-haspopup="listbox" aria-expanded="false"><span id="langddCur">RU</span><svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="langsw langdd-panel" id="langddPanel" role="listbox">
+        <button data-lang="ru" data-short="RU">Русский</button>
+        <button data-lang="en" data-short="EN">English</button>
+        <button data-lang="uz" data-short="UZ">O&#39;zbekcha</button>
+        <button data-lang="kz" data-short="KZ">Қазақша</button>
+        <button data-lang="ko" data-short="KO">한국어</button>
+      </div>
+    </div>
+      <a class="btn btn-primary" href="booking.html" style="text-decoration:none;font:700 14px Manrope,sans-serif;color:#fff;background:var(--accent,#A67C4E);padding:11px 22px;border-radius:999px">Забронировать</a>
+    </div>
+  </nav>
+<main class="pg-main">
+
+<div data-anim=""><div class="pg-eyebrow">Контакты</div>
+<h1 class="pg-h1">Свяжитесь с нами</h1>
+<p class="pg-sub">Отвечаем быстро и по делу — 24/7, на русском, английском, узбекском, казахском и корейском.</p></div>
+<div class="ct-grid">
+  <div class="ct-item" data-anim=""><span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.4.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z"/></svg></span>
+    <div><div class="t">Телефоны</div><div class="d"><a href="tel:+998900115074">+998 90 011 50 74</a> — основной<br><a href="tel:+998900000000">+998 90 000 00 00</a> — дополнительный</div></div></div>
+  <div class="ct-item" data-anim=""><span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.6c.3-1.2-.9-2.2-2-1.7L2.7 9.6c-1.2.5-1.1 2.2.1 2.6l4.6 1.4 1.8 5.7c.3 1 1.6 1.3 2.3.5l2.6-2.7 4.8 3.5c.9.7 2.2.2 2.4-.9l2.6-15.1zM8.5 13l9.5-6-7.4 7 .1 3.2-1.2-3.6-1-.6z"/></svg></span>
+    <div><div class="t">Telegram</div><div class="d"><a href="https://t.me/novahome_uzb" target="_blank" rel="noopener">@novahome_uzb</a> — самый быстрый способ: бронь, вопросы, доп. услуги.</div></div></div>
+  <div class="ct-item" data-anim=""><span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.6-6.1c-.3-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1-.2.3-.7.8-.8 1-.1.2-.3.2-.6.1a6.8 6.8 0 0 1-3.3-2.9c-.3-.4 0-.5.2-.8l.4-.5c.1-.2.1-.3 0-.5l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.9.9-1.1 2.2-.2 3.8a12 12 0 0 0 4.6 4.3c1.7.8 2.4.8 3.2.7.5 0 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2-.1-.1-.2-.1-.4-.1z"/></svg></span>
+    <div><div class="t">WhatsApp</div><div class="d"><a href="https://wa.me/998900115074" target="_blank" rel="noopener">+998 90 011 50 74</a></div></div></div>
+  <div class="ct-item" data-anim=""><span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="18" height="18" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.2" fill="currentColor" stroke="none"/></svg></span>
+    <div><div class="t">Instagram</div><div class="d"><a href="https://instagram.com/novahome_uzb" target="_blank" rel="noopener">@novahome_uzb</a> — фото квартир и жизнь Nest One.</div></div></div>
+</div>
+<div class="pg-card" data-anim="" style="padding:14px">
+  <div style="font:800 15px Manrope,sans-serif;padding:8px 10px 14px">ЖК NEST ONE · ул. Батыра Закирова 1А/1, Ташкент</div>
+  <div style="border-radius:12px;overflow:hidden"><iframe title="Nest One на карте" src="https://yandex.uz/map-widget/v1/-/CTeoB6zM" width="100%" height="420" frameborder="0" allowfullscreen="true" loading="lazy" style="display:block;border:0;width:100%;height:420px;filter:saturate(.96)"></iframe></div>
+</div>
+</main>
+<footer style="background:#FFFFFF;color:#1C1815;border-top:1px solid #EDE8DF;padding:64px 48px 40px">
+    <div data-anim="" style="max-width:1180px;margin:0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:40px;flex-wrap:wrap">
+      <div style="max-width:340px">
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:16px"><span style="width:40px;height:40px;border-radius:50%;background:#F4ECDD;display:flex;align-items:center;justify-content:center"><img src="data:image/png;base64,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" alt="" style="width:27px;height:27px;object-fit:contain;box-sizing:content-box;background:#1C1815;border-radius:10px;padding:6px"></span><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:20px;color:#1C1815">Nova<span style="color:var(--accent,#A67C4E)">Home</span></span></div>
+        <p style="margin:0;font:400 14px/1.7 Manrope,sans-serif;color:rgba(28,24,21,.62)">Премиальные апартаменты в комплексе Nest One. Самостоятельное заселение и поддержка 24/7.</p>
+      </div>
+      <div>
+        <div style="font:700 11px Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:rgba(28,24,21,.5);margin-bottom:16px">Связаться</div>
+        <!-- TODO: замените дополнительный номер +998 90 000 00 00 на реальный -->
+        <a class="foot-phone" href="tel:+998900115074"><i class="ph-fill ph-phone"></i><span>+998 90 011 50 74<small>Основной номер</small></span></a>
+        <a class="foot-phone" href="tel:+998900000000" style="margin-bottom:18px"><i class="ph-fill ph-phone-plus"></i><span>+998 90 000 00 00<small>Дополнительный номер</small></span></a>
+        <a href="https://wa.me/998900115074" style="display:inline-flex;align-items:center;gap:12px;text-decoration:none;background:var(--accent,#A67C4E);color:#1C1815;padding:14px 24px;border-radius:999px;font:700 15px Manrope,sans-serif"><i class="ph-fill ph-whatsapp-logo" style="font-size:20px"></i>+998 90 011 50 74</a>
+        <div style="display:flex;gap:18px;margin-top:20px">
+          <a href="https://instagram.com/novahome_uzb" style="text-decoration:none;display:flex;align-items:center;gap:8px;font:500 13px Manrope,sans-serif;color:rgba(28,24,21,.72)"><i class="ph-fill ph-instagram-logo" style="font-size:18px;color:var(--accent,#A67C4E)"></i>@novahome_uzb</a>
+        </div>
+      </div>
+      <div>
+        <div style="font:700 11px Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:rgba(28,24,21,.5);margin-bottom:16px">Разделы</div>
+        <div style="display:flex;flex-direction:column;gap:11px">
+          <a href="booking.html" style="text-decoration:none;font:500 14px Manrope,sans-serif;color:rgba(28,24,21,.72)">Бронирование</a>
+          <a href="blog.html" style="text-decoration:none;font:500 14px Manrope,sans-serif;color:rgba(28,24,21,.72)">Блог</a>
+          <a href="contacts.html" style="text-decoration:none;font:500 14px Manrope,sans-serif;color:rgba(28,24,21,.72)">Контакты</a>
+          <a href="faq.html" style="text-decoration:none;font:500 14px Manrope,sans-serif;color:rgba(28,24,21,.72)">FAQ</a>
+        </div>
+      </div>
+    </div>
+    <div style="max-width:1180px;margin:40px auto 0;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
+      <div>
+        <div style="font:700 11px Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:rgba(28,24,21,.5);margin-bottom:12px">Принимаем к оплате</div>
+        <div class="pay-row">
+          <span class="pay-logo"><span style="font:italic 900 17px/1 Manrope,sans-serif;color:#1A2E86;letter-spacing:.4px">VISA</span></span>
+          <span class="pay-logo"><span class="wu-sq">WU</span><span style="font:800 11px/1.1 Manrope,sans-serif;color:#000">WESTERN<br>UNION</span></span>
+          <span class="pay-logo"><svg width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#FF4800" stroke-width="3.4"/><circle cx="19" cy="6" r="3.4" fill="#FF4800"/></svg><span style="font:800 14px/1 Manrope,sans-serif;color:#26303c">payoneer</span></span>
+          <span class="pay-logo"><svg width="15" height="18" viewBox="0 0 384 512" fill="#000"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><span style="font:700 15px/1 Manrope,sans-serif;color:#000">Pay</span></span>
+        </div>
+      </div>
+      <div>
+        <div style="font:700 11px Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:rgba(28,24,21,.5);margin-bottom:12px">Мы на связи</div>
+        <div class="soc-row">
+          <a href="tel:+998900115074" aria-label="Телефон"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.4.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z"/></svg></a>
+          <a href="https://t.me/novahome_uzb" target="_blank" rel="noopener" aria-label="Telegram"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.6c.3-1.2-.9-2.2-2-1.7L2.7 9.6c-1.2.5-1.1 2.2.1 2.6l4.6 1.4 1.8 5.7c.3 1 1.6 1.3 2.3.5l2.6-2.7 4.8 3.5c.9.7 2.2.2 2.4-.9l2.6-15.1zM8.5 13l9.5-6-7.4 7 .1 3.2-1.2-3.6-1-0.6z"/></svg></a>
+          <a href="https://wa.me/998900115074" target="_blank" rel="noopener" aria-label="WhatsApp"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.6-6.1c-.3-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1-.2.3-.7.8-.8 1-.1.2-.3.2-.6.1a6.8 6.8 0 0 1-3.3-2.9c-.3-.4 0-.5.2-.8l.4-.5c.1-.2.1-.3 0-.5l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.9.9-1.1 2.2-.2 3.8a12 12 0 0 0 4.6 4.3c1.7.8 2.4.8 3.2.7.5 0 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2-.1-.1-.2-.1-.4-.1z"/></svg></a>
+          <a href="https://instagram.com/novahome_uzb" target="_blank" rel="noopener" aria-label="Instagram"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="18" height="18" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.2" fill="currentColor" stroke="none"/></svg></a>
+        </div>
+      </div>
+    </div>
+    <div style="max-width:1180px;margin:44px auto 0;padding-top:22px;border-top:1px solid rgba(28,24,21,.12);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font:400 12px Manrope,sans-serif;color:rgba(28,24,21,.45)">
+      <span>© 2026 NovaHome · Nest One, Ташкент</span>
+      <span>ул. Батыра Закирова 1А/1</span>
+    </div>
+  </footer>
+<!-- ===== ПОПАП: скидка 5% ===== -->
+<div id="promo5" role="dialog" aria-label="Скидка на длительное проживание" aria-hidden="true">
+  <button type="button" id="promo5x" aria-label="Закрыть">&times;</button>
+  <div class="p5-badge">−5%</div>
+  <div class="p5-t">Длительное проживание — скидка 5%</div>
+  <div class="p5-d">При бронировании от 7 ночей — скидка 5% на всё проживание.</div>
+  <a class="p5-cta" href="booking.html" id="promo5go">Забронировать со скидкой</a>
+</div>
+<noscript><style>[data-anim],.stagger>*{opacity:1!important;transform:none!important}</style></noscript>
+<script>setTimeout(function(){document.querySelectorAll('[data-anim]:not(.in)').forEach(function(e){e.classList.add('in')});},1800);</script>
+<script>
+(function(){/* появления на подстраницах без рантайма конструктора */
+  var els=document.querySelectorAll('[data-anim]');
+  if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in')});return;}
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:.12});
+  els.forEach(function(e){io.observe(e)});
+})();
+</script>
+<script>
+
+(function(){
+  /* дропдаун языков */
+  var dd=document.getElementById('langdd'),btn=document.getElementById('langddBtn'),
+      panel=document.getElementById('langddPanel'),cur=document.getElementById('langddCur');
+  if(dd){
+    btn.addEventListener('click',function(e){e.stopPropagation();
+      var open=panel.classList.toggle('open');btn.setAttribute('aria-expanded',String(open));});
+    document.addEventListener('click',function(){panel.classList.remove('open');btn.setAttribute('aria-expanded','false');});
+    panel.querySelectorAll('button').forEach(function(bt){
+      bt.addEventListener('click',function(){cur.textContent=bt.getAttribute('data-short');});});
+    try{var sv=localStorage.getItem('novahome_lang')||'ru';
+      var m={ru:'RU',en:'EN',uz:'UZ',kz:'KZ',ko:'KO'};cur.textContent=m[sv]||'RU';}catch(e){}
+  }
+  /* карусель апартаментов */
+  var tr=document.getElementById('aptTrack');
+  if(tr){
+    var dots=document.getElementById('aptDots').children;
+    var go=function(d){tr.scrollBy({left:d*tr.clientWidth,behavior:'smooth'});};
+    document.getElementById('aptPrev').addEventListener('click',function(){go(-1);});
+    document.getElementById('aptNext').addEventListener('click',function(){go(1);});
+    var sync=function(){var i=Math.round(tr.scrollLeft/tr.clientWidth);
+      for(var k=0;k<dots.length;k++)dots[k].className=(k===i)?'on':'';};
+    tr.addEventListener('scroll',function(){clearTimeout(tr._t);tr._t=setTimeout(sync,80);},{passive:true});
+  }
+  /* попап -5%: раз в 3 дня, через 12с или на 45% скролла */
+  var p=document.getElementById('promo5');
+  if(p){
+    var KEY='nv_promo5_seen',shown=false;
+    var ok=true;try{var ts=+localStorage.getItem(KEY)||0;ok=(Date.now()-ts)>2.6e8;}catch(e){}
+    var show=function(){if(shown||!ok)return;shown=true;p.classList.add('on');p.setAttribute('aria-hidden','false');};
+    var hide=function(){p.classList.remove('on');p.setAttribute('aria-hidden','true');
+      try{localStorage.setItem(KEY,String(Date.now()));}catch(e){}};
+    setTimeout(show,12000);
+    addEventListener('scroll',function(){
+      if((scrollY||pageYOffset)>(document.body.scrollHeight-innerHeight)*.45)show();},{passive:true});
+    document.getElementById('promo5x').addEventListener('click',hide);
+    document.getElementById('promo5go').addEventListener('click',hide);
+    addEventListener('keydown',function(e){if(e.key==='Escape'&&p.classList.contains('on'))hide();});
+  }
+})();
+
+</script>
+<script>
+
+
+/* ═ Независимое переключение языков: работает даже если рантайм конструктора упал ═ */
+(function(){
+  const D = {
+      "О нас":["About","Biz haqimizda","Біз туралы","회사 소개"],
+      "Апартаменты":["Apartments","Apartamentlar","Апартаменттер","아파트"],
+      "Удобства":["Amenities","Qulayliklar","Қолайлылықтар","편의시설"],
+      "Расположение":["Location","Joylashuv","Орналасуы","위치"],
+      "Забронировать":["Book now","Bron qilish","Брондау","예약하기"],
+      "Смотреть апартаменты":["View apartments","Apartamentlarni ko'rish","Апартаменттерді көру","아파트 보기"],
+      "Nest One · Ташкент":["Nest One · Tashkent","Nest One · Toshkent","Nest One · Ташкент","Nest One · 타슈켄트"],
+      "Апартаменты уровня":["Hotel-grade","Mehmonxona darajasidagi","Қонақүй деңгейіндегі","호텔 수준의"],
+      "отеля — с уютом дома":["apartments with home comfort","apartamentlar — uy qulayligi bilan","апартаменттер — үй жайлылығымен","아파트 — 집같은 편안함"],
+      "Современные премиальные апартаменты в самом сердце Ташкента. Самостоятельное заселение, поддержка 24/7 и высокий сервис для каждого гостя.":["Modern premium apartments in the heart of Tashkent. Self check-in, 24/7 support and top-tier service for every guest.","Toshkent markazidagi zamonaviy premium apartamentlar. Mustaqil kirish, 24/7 qo'llab-quvvatlash va har bir mehmon uchun yuqori xizmat.","Ташкент орталығындағы заманауи премиум апартаменттер. Өз бетінше кіру, 24/7 қолдау және әр қонаққа жоғары сервис.","타슈켄트 중심부의 현대적인 프리미엄 아파트. 셀프 체크인, 24시간 지원, 최상의 서비스를 제공합니다."],
+      "Поддержка":["Support","Qo'llab-quvvatlash","Қолдау","지원"],
+      "Апартаментов":["Apartments","Apartament","Апартамент","아파트"],
+      "Проверить наличие и забронировать":["Check availability & book","Bandlikni tekshirish va bron qilish","Бос орындарды тексеріп, брондаңыз","예약 가능 여부 확인 및 예약"],
+      "Виджет бронирования загрузится здесь":["Booking widget will load here","Bron qilish vidjeti shu yerda yuklanadi","Брондау виджеті осында жүктеледі","예약 위젯이 여기에 로드됩니다"],
+      "Гостиничный сервис":["Hotel service","Mehmonxona xizmati","Қонақүй сервисі","호텔 서비스"],
+      "с теплом собственного дома":["with the warmth of home","uy iliqligi bilan","өз үйіңіздің жылуымен","내 집 같은 따뜻함"],
+      "NovaHome — сеть современных премиальных апартаментов в престижном комплексе Nest One в центре Ташкента. Мы объединяем комфорт гостиничного сервиса с уютом дома: самостоятельное заселение в любое время, круглосуточная поддержка и внимание к каждой детали.":["NovaHome is a network of modern premium apartments in the prestigious Nest One complex in central Tashkent. We blend hotel-grade service with the comfort of home: self check-in anytime, 24/7 support and attention to every detail.","NovaHome — Toshkent markazidagi nufuzli Nest One majmuasidagi zamonaviy premium apartamentlar tarmog'i. Biz mehmonxona xizmatini uy qulayligi bilan birlashtiramiz: istalgan vaqtda mustaqil kirish, 24/7 qo'llab-quvvatlash va har bir tafsilotga e'tibor.","NovaHome — Ташкент орталығындағы беделді Nest One кешеніндегі заманауи премиум апартаменттер желісі. Біз қонақүй сервисінің жайлылығын үй жылуымен біріктіреміз: кез келген уақытта өзіндік кіру, тәулік бойы қолдау және әр детальға назар.","NovaHome는 타슈켄트 중심 Nest One 단지의 프리미엄 아파트 네트워크입니다. 언제든 셀프 체크인, 24시간 지원, 세심한 배려로 호텔 서비스와 집의 편안함을 결합했습니다."],
+      "Поддержка 24/7":["24/7 support","24/7 qo'llab-quvvatlash","Қолдау 24/7","24시간 지원"],
+      "Довольных гостей":["Of happy guests","Mamnun mehmonlar","Риза қонақтар","만족한 고객의"],
+      "рекомендуют нас":["recommend us","bizni tavsiya qiladi","бізді ұсынады","추천율"],
+      "Выберите свой формат":["Choose your format","O'z formatingizni tanlang","Өз форматыңызды таңдаңыз","원하는 형태를 선택하세요"],
+      "Студии и апартаменты с одной и двумя спальнями — с балконами, террасами и видами на город.":["Studios and one- and two-bedroom apartments — with balconies, terraces and city views.","Studiyalar va bir va ikki yotoqxonali apartamentlar — balkon, terrasa va shahar manzarasi bilan.","Балконы, террасасы және қала көрінісі бар студиялар мен бір-екі жатын бөлмелі апартаменттер.","발코니, 테라스, 시티뷰를 갖춘 스튜디오 및 침실 1~2개 아파트."],
+      "Хит":["Top","Hit","Хит","인기"],
+      "1 спальня · 42 m² · вид на город":["1 bedroom · 42 m² · city view","1 yotoqxona · 42 m² · shahar manzarasi","1 жатын бөлме · 42 m² · қала көрінісі","침실 1 · 42 m² · 시티뷰"],
+      "Студия · 42 m² · Hilton и фонтан":["Studio · 42 m² · Hilton & fountain","Studiya · 42 m² · Hilton va favvora","Студия · 42 m² · Hilton және субұрқақ","스튜디오 · 42 m² · 힐튼 & 분수 전망"],
+      "2 спальни · 65 m² · частная терраса":["2 bedrooms · 65 m² · private terrace","2 yotoqxona · 65 m² · shaxsiy terrasa","2 жатын бөлме · 65 m² · жеке терраса","침실 2 · 65 m² · 전용 테라스"],
+      "до 3":["up to 3","3 kishigacha","3-ке дейін","최대 3명"],
+      "до 4":["up to 4","4 kishigacha","4-ке дейін","최대 4명"],
+      "2 места":["2 beds","2 joy","2 орын","침대 2"],
+      "1 место":["1 bed","1 joy","1 орын","침대 1"],
+      "3 места":["3 beds","3 joy","3 орын","침대 3"],
+      "Полный каталог апартаментов":["Full apartment catalog","To'liq apartamentlar katalogi","Апартаменттердің толық каталогы","전체 아파트 카탈로그"],
+      "Список квартир загрузится здесь":["Apartment list will load here","Kvartiralar ro'yxati shu yerda yuklanadi","Пәтерлер тізімі осында жүктеледі","아파트 목록이 여기에 로드됩니다"],
+      "Инфраструктура Nest One":["Nest One facilities","Nest One infratuzilmasi","Nest One инфрақұрылымы","Nest One 부대시설"],
+      "Эксклюзивно для гостей":["Exclusive for guests","Mehmonlar uchun eksklyuziv","Тек қонақтар үшін","투숙객 전용"],
+      "Доступ к закрытой инфраструктуре небоскрёба — включён в проживание.":["Access to the tower's private facilities — included in your stay.","Osmono'par binoning yopiq infratuzilmasidan foydalanish — yashash narxiga kiritilgan.","Зәулім ғимараттың жабық инфрақұрылымына кіру — тұру құнына қосылған.","타워의 프라이빗 시설 이용이 숙박에 포함되어 있습니다."],
+      "48 этаж":["48th floor","48-qavat","48-қабат","48층"],
+      "28 этаж":["28th floor","28-qavat","28-қабат","28층"],
+      "2 этаж":["2nd floor","2-qavat","2-қабат","2층"],
+      "Смотровая площадка":["Observation deck","Kuzatuv maydonchasi","Көру алаңы","전망대"],
+      "Самая высокая смотровая площадка в Узбекистане — панорама города 360°.":["The highest observation deck in Uzbekistan — a 360° city panorama.","O'zbekistondagi eng baland kuzatuv maydonchasi — 360° shahar panoramasi.","Өзбекстандағы ең биік көру алаңы — қаланың 360° панорамасы.","우즈베키스탄에서 가장 높은 전망대 — 360° 시티 파노라마."],
+      "Спортзал":["Gym","Sport zali","Спортзал","피트니스"],
+      "Современный фитнес-зал с тренажёрами и видом на Ташкент.":["A modern fitness room with equipment and views over Tashkent.","Toshkent manzarasiga ega zamonaviy fitnes zali.","Ташкент көрінісі бар заманауи фитнес-зал.","타슈켄트 전망의 현대적인 피트니스 센터."],
+      "Приватный парк":["Private park","Shaxsiy park","Жеке саябақ","프라이빗 파크"],
+      "Закрытый зелёный сад — только для жителей комплекса.":["A private green garden — for residents only.","Yopiq yashil bog' — faqat majmua istiqomatchilari uchun.","Жабық жасыл бақ — тек кешен тұрғындары үшін.","단지 입주민 전용 프라이빗 정원."],
+      "Всё для комфортного проживания":["Everything for a comfortable stay","Qulay yashash uchun barchasi","Жайлы тұруға қажеттінің бәрі","편안한 숙박을 위한 모든 것"],
+      "Быстрый Wi-Fi":["Fast Wi-Fi","Tezkor Wi-Fi","Жылдам Wi-Fi","초고속 Wi-Fi"],
+      "Стабильный интернет во всех зонах":["Stable internet in all areas","Barcha hududlarda barqaror internet","Барлық аймақта тұрақты интернет","모든 공간에서 안정적인 인터넷"],
+      "Стиральная машина":["Washing machine","Kir yuvish mashinasi","Кір жуғыш машина","세탁기"],
+      "В каждом апартаменте":["In every apartment","Har bir apartamentda","Әр апартаментте","모든 아파트에 구비"],
+      "Онлайн-кинотеатры и стриминг":["Streaming & online cinema","Onlayn kinoteatr va striming","Онлайн-кинотеатрлар мен стриминг","스트리밍 & 온라인 시네마"],
+      "Кондиционер":["Air conditioning","Konditsioner","Кондиционер","에어컨"],
+      "Климат-контроль круглый год":["Year-round climate control","Yil davomida iqlim nazorati","Жыл бойы климат-бақылау","연중 냉난방 완비"],
+      "Кухня":["Kitchen","Oshxona","Ас үй","주방"],
+      "Полностью оборудована":["Fully equipped","To'liq jihozlangan","Толық жабдықталған","풀옵션"],
+      "Можно с детьми":["Family friendly","Bolalar bilan mumkin","Балалармен болуға болады","아이 동반 가능"],
+      "Семейный формат размещения":["Family-style accommodation","Oilaviy joylashuv","Отбасылық орналасу форматы","가족 친화형 숙소"],
+      "Трансфер":["Transfer","Transfer","Трансфер","픽업 서비스"],
+      "Встреча в аэропорту · $25":["Airport pickup · $25","Aeroportda kutib olish · $25","Әуежайда қарсы алу · $25","공항 픽업 · $25"],
+      "В самом сердце Tashkent City":["In the heart of Tashkent City","Tashkent City markazida","Tashkent City-дің дәл жүрегінде","타슈켄트 시티 중심부"],
+      "Небоскрёб Nest One — новая доминанта города. Главные места Ташкента — в пешей доступности.":["The Nest One tower is the city's new landmark. Tashkent's key spots are within walking distance.","Nest One osmono'par binosi — shaharning yangi ramzi. Toshkentning asosiy joylari piyoda masofada.","Nest One зәулім ғимараты — қаланың жаңа символы. Ташкенттің басты орындары — жаяу жетер жерде.","Nest One 타워는 도시의 새로운 랜드마크입니다. 타슈켄트 명소가 도보 거리에 있습니다."],
+      "ЖК NEST ONE":["NEST ONE complex","NEST ONE majmuasi","NEST ONE ТК","NEST ONE 단지"],
+      "ул. Батыра Закирова 1А/1":["1A/1 Batyra Zakirova St.","Botir Zokirov ko'chasi 1A/1","Батыр Закиров көш., 1А/1","바티르 자키로프 거리 1A/1"],
+      "Центр города":["City center","Shahar markazi","Қала орталығы","시내 중심"],
+      "Что рядом":["What's nearby","Atrofda nima bor","Жақын жерде не бар","주변 명소"],
+      "Всё самое интересное — в паре минут от дома":["Everything worth seeing — minutes from home","Eng qiziqarli joylar — uydan bir necha daqiqa","Ең қызықтының бәрі — үйден бірнеше минутта","볼거리가 모두 도보 몇 분 거리"],
+      "Крупнейший торговый центр":["The largest shopping mall","Eng yirik savdo markazi","Ең ірі сауда орталығы","최대 쇼핑몰"],
+      "Парк развлечений и шоу":["Amusement park & shows","Ko'ngilochar park va shoular","Ойын-сауық паркі мен шоу","놀이공원 & 쇼"],
+      "Зелёный парк и фонтаны":["Green park & fountains","Yashil park va favvoralar","Жасыл саябақ пен субұрқақтар","공원과 분수"],
+      "Метро":["Metro","Metro","Метро","지하철"],
+      "Весь город за 20 минут":["The whole city in 20 minutes","Butun shahar 20 daqiqada","Бүкіл қала 20 минутта","20분이면 시내 어디든"],
+      "4 мин":["4 min","4 daq","4 мин","4분"],
+      "10 мин":["10 min","10 daq","10 мин","10분"],
+      "5 мин":["5 min","5 daq","5 мин","5분"],
+      "1 мин":["1 min","1 daq","1 мин","1분"],
+      "Построить маршрут":["Get directions","Marshrut tuzish","Бағыт құру","길찾기"],
+      "Премиальные апартаменты в комплексе Nest One. Самостоятельное заселение и поддержка 24/7.":["Premium apartments in the Nest One complex. Self check-in and 24/7 support.","Nest One majmuasidagi premium apartamentlar. Mustaqil kirish va 24/7 qo'llab-quvvatlash.","Nest One кешеніндегі премиум апартаменттер. Өзіндік кіру және 24/7 қолдау.","Nest One 단지의 프리미엄 아파트. 셀프 체크인 & 24시간 지원."],
+      "Связаться":["Contact","Bog'lanish","Байланысу","문의하기"],
+      "Разделы":["Sections","Bo'limlar","Бөлімдер","메뉴"],
+      "© 2026 NovaHome · Nest One, Ташкент":["© 2026 NovaHome · Nest One, Tashkent","© 2026 NovaHome · Nest One, Toshkent","© 2026 NovaHome · Nest One, Ташкент","© 2026 NovaHome · Nest One, 타슈켄트"]
+    ,
+      "Сервис":["Service","Servis","Сервис","서비스"],
+      "Дополнительные услуги":["Extra services","Qo'shimcha xizmatlar","Қосымша қызметтер","부가 서비스"],
+      "Сделаем проживание ещё удобнее — закажите заранее у менеджера.":["We'll make your stay even more comfortable — order in advance from our manager.","Yashashni yanada qulay qilamiz — menejerdan oldindan buyurtma qiling.","Тұруды одан да жайлы етеміз — менеджерден алдын ала тапсырыс беріңіз.","더 편안한 숙박을 위해 매니저에게 미리 신청하세요."],
+      "Узнать подробнее":["Learn more","Batafsil","Толығырақ","자세히 보기"],
+      "Трансфер из аэропорта":["Airport transfer","Aeroportdan transfer","Әуежайдан трансфер","공항 픽업"],
+      "Встретим с табличкой и довезём до дома. Стоимость фиксируем заранее.":["We meet you with a name sign and drive you home. The price is fixed in advance.","Sizni taxtacha bilan kutib olamiz va uygacha olib boramiz. Narx oldindan belgilanadi.","Тақтайшамен қарсы алып, үйге жеткіземіз. Бағасы алдын ала белгіленеді.","네임보드로 맞이하여 숙소까지 모십니다. 요금은 사전 확정."],
+      "Проживание с животными":["Stay with pets","Uy hayvonlari bilan yashash","Үй жануарларымен тұру","반려동물 동반"],
+      "Обсудим условия для вашего питомца — от кошки до собаки.":["We'll agree terms for your pet — from cats to dogs.","Uy hayvoningiz uchun shartlarni kelishib olamiz — mushukdan itgacha.","Мысықтан итке дейін — үй жануарыңызға шарттарды келісеміз.","고양이부터 강아지까지, 조건을 협의해 드립니다."],
+      "Клининг":["Cleaning","Klining","Клининг","클리닝"],
+      "Дополнительная уборка во время проживания — $20 за уборку.":["Extra cleaning during your stay — $20 per cleaning.","Yashash davomida qo'shimcha tozalash — har biri $20.","Тұру кезіндегі қосымша тазалау — әр тазалау $20.","숙박 중 추가 청소 — 회당 $20."],
+      "Услуги переводчика":["Interpreter services","Tarjimon xizmatlari","Аудармашы қызметі","통역 서비스"],
+      "Английский, корейский, русский и узбекский. Заказывайте при бронировании.":["English, Korean, Russian and Uzbek. Order when booking.","Ingliz, koreys, rus va o'zbek tillari. Bron qilishda buyurtma qiling.","Ағылшын, корей, орыс және өзбек тілдері. Брондау кезінде тапсырыс беріңіз.","영어·한국어·러시아어·우즈베크어. 예약 시 신청하세요."],
+      "Доп. койко-место":["Extra bed","Qo'shimcha yotoq joyi","Қосымша төсек-орын","추가 침대"],
+      "Разместим гостя или ребёнка: бельё и полотенца включены.":["We'll accommodate a guest or child: linen and towels included.","Mehmon yoki bolani joylashtiramiz: choyshab va sochiqlar kiritilgan.","Қонақ немесе баланы орналастырамыз: төсек-орын мен сүлгілер қоса беріледі.","게스트나 아이를 위한 침대: 침구·수건 포함."],
+      "Детская кроватка, стульчик, игрушки":["Baby cot, high chair, toys","Bolalar karavoti, stulcha, o'yinchoqlar","Балалар төсегі, орындық, ойыншықтар","아기침대·유아의자·장난감"],
+      "Предоставляем бесплатно — просто предупредите заранее.":["Provided free of charge — just let us know in advance.","Bepul taqdim etamiz — faqat oldindan xabar bering.","Тегін ұсынамыз — тек алдын ала ескертіңіз.","무료 제공 — 미리 알려만 주세요."],
+      "Ранний заезд и поздний выезд":["Early check-in & late check-out","Erta kirish va kech chiqish","Ерте кіру және кеш шығу","얼리 체크인 & 레이트 체크아웃"],
+      "По предварительной договорённости, в зависимости от загрузки.":["By prior arrangement, subject to availability.","Oldindan kelishuv asosida, bandlikka qarab.","Алдын ала келісім бойынша, бос орындарға байланысты.","사전 협의 시 가능(객실 상황에 따라)."],
+      "Нас можно найти на площадках":["Find us on booking platforms","Bizni bron platformalarida topasiz","Бізді брондау платформаларынан табасыз","예약 플랫폼에서 만나보세요"],
+      "Принимаем к оплате":["We accept","To'lovga qabul qilamiz","Төлемге қабылдаймыз","결제 수단"],
+      "Мы на связи":["Stay in touch","Biz aloqadamiz","Біз байланыстамыз","문의 채널"],
+      "Основной номер":["Main number","Asosiy raqam","Негізгі нөмір","대표 번호"],
+      "Дополнительный номер":["Additional number","Qo'shimcha raqam","Қосымша нөмір","추가 번호"]
+    ,
+      "Длительное проживание — скидка 5%":["Long stay — 5% off","Uzoq muddatli yashash — 5% chegirma","Ұзақ тұру — 5% жеңілдік","장기 숙박 — 5% 할인"],
+      "При бронировании от 7 ночей — скидка 5% на всё проживание.":["Book 7+ nights and get 5% off your entire stay.","7 kecha va undan ko'p bron qilsangiz — butun yashash uchun 5% chegirma.","7 түн және одан көп брондасаңыз — бүкіл тұруға 5% жеңілдік.","7박 이상 예약 시 전체 숙박 5% 할인."],
+      "Забронировать со скидкой":["Book with discount","Chegirma bilan bron qilish","Жеңілдікпен брондау","할인가로 예약"],
+      "Получить консультацию":["Get a consultation","Maslahat olish","Кеңес алу","상담 받기"],
+      "Бронирование":["Booking","Bron qilish","Брондау","예약"],
+      "Блог":["Blog","Blog","Блог","블로그"],
+      "Контакты":["Contacts","Kontaktlar","Байланыс","연락처"],
+      "Главная":["Home","Bosh sahifa","Басты бет","홈"],
+      "Смотреть все апартаменты":["View all apartments","Barcha apartamentlarni ko'rish","Барлық апартаменттерді көру","전체 아파트 보기"],
+      "Часто задаваемые вопросы":["Frequently asked questions","Ko'p so'raladigan savollar","Жиі қойылатын сұрақтар","자주 묻는 질문"],
+      "Свяжитесь с нами":["Contact us","Biz bilan bog'laning","Бізбен байланысыңыз","문의하기"],
+      "Полный каталог и бронирование":["Full catalog & booking","To'liq katalog va bron","Толық каталог және брондау","전체 카탈로그 및 예약"],
+      "Выберите даты и квартиру — подтверждение придёт моментально.":["Pick dates and an apartment — confirmation is instant.","Sana va kvartirani tanlang — tasdiq darhol keladi.","Күндер мен пәтерді таңдаңыз — растау бірден келеді.","날짜와 아파트를 선택하면 즉시 확정됩니다."]
+    };
+  const idx = { ru: -1, en: 0, uz: 1, kz: 2, ko: 3 };
+  let nodes = [];
+  function collect(){
+    nodes = [];
+    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    let n; while ((n = w.nextNode())){ const t = n.nodeValue.trim(); if (t && D[t]) nodes.push({node:n, ru:t}); }
+  }
+  function apply(lang){
+    const i = idx[lang];
+    if (i === undefined) return;
+    if (!nodes.length) collect();
+    nodes.forEach(o => { o.node.nodeValue = (i < 0) ? o.ru : ((D[o.ru] && D[o.ru][i]) || o.ru); });
+    document.querySelectorAll('.langsw button').forEach(bt =>
+      bt.classList.toggle('active', bt.getAttribute('data-lang') === lang));
+    try { localStorage.setItem('novahome_lang', lang); } catch(e){}
+  }
+  window.NV_applyLang = apply;
+  function boot(){
+    collect();
+    document.querySelectorAll('.langsw button').forEach(bt =>
+      bt.addEventListener('click', () => apply(bt.getAttribute('data-lang'))));
+    let sv = 'ru'; try { sv = localStorage.getItem('novahome_lang') || 'ru'; } catch(e){}
+    if (sv !== 'ru') apply(sv);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+
+/* ═ Подсказка про виджет при открытии файла напрямую (file://) ═ */
+(function(){
+  if (location.protocol !== 'file:') return;
+  var book = document.getElementById('book');
+  if (!book) return;
+  var n = document.createElement('div');
+  n.style.cssText = 'margin-top:14px;padding:13px 16px;border-radius:12px;background:rgba(166,124,78,.1);border:1px solid rgba(166,124,78,.35);font:600 13px Manrope,sans-serif;color:#6f5a3e';
+  n.textContent = 'Виджет бронирования не работает при открытии файла напрямую. Запустите start-server.command (localhost:8080) или откройте сайт на хостинге.';
+  book.appendChild(n);
+})();
+
+
+</script>
+
+</body>
+</html>
