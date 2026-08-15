@@ -394,7 +394,22 @@ footer a[href*="wa.me"] svg{fill:#fff!important}
 @media(max-width:760px) and (hover:none){
   .amen>div:active{transform:scale(.98)}
 }
-</style></head>
+</style><style id="nv-fix-mobile2">
+/* открытое моб.меню — светлый фон: логотип и бургер тёмные */
+body:has(.mnav.open) .nav .logo-text{color:#1C1815!important}
+body:has(.mnav.open) .nav .logo-text span{color:#1C1815!important}
+body:has(.mnav.open) .nav .logo-light{opacity:0!important}
+body:has(.mnav.open) .nav .logo-dark{opacity:1!important}
+body:has(.mnav.open) .nav button svg,body:has(.mnav.open) .nav .burger{color:#1C1815!important;stroke:#1C1815}
+/* лого площадок крупнее */
+.plat-strip{gap:18px 56px!important}
+.plat-strip img{height:44px!important}
+@media(max-width:760px){.plat-strip img{height:34px!important}}
+/* скелет виджетов, пока HomeReserve не смонтировался */
+[data-instance-id]{position:relative;border-radius:14px}
+[data-instance-id]:empty{background:linear-gradient(100deg,#F1EADD 40%,#FBF7F0 50%,#F1EADD 60%);background-size:200% 100%;animation:nvShimmer 1.4s infinite linear}
+@keyframes nvShimmer{to{background-position:-200% 0}}
+</style><style id="nv-burger-fix">#nvBurger,#nvBurger svg,.nav .burger,.nav .burger svg{color:#1C1815!important;stroke:#1C1815!important}</style></head>
 <body>
 <nav class="nav scrolled" style="position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:20px 48px;background:transparent">
     <a href="index.html" style="display:flex;align-items:center;gap:11px;text-decoration:none;flex:none">

@@ -1725,19 +1725,9 @@
 
   <script type="module" src="https://homereserve.ru/widget.js"></script>
   <script type="module">
-    const _TOKEN = 'GdXT9Gz4Mv';
-    let _tries = 0;
-    const _initHR = () => {
-      const hr = window.homereserve;
-      if (hr && hr.initWidgetSearch && hr.initWidgetList) {
-        try { hr.initWidgetSearch({ token: _TOKEN, instance_id: 'search' }); } catch(e) {}
-        /* каталог живёт на странице booking.html */
-        return;
-      }
-      if (_tries++ < 100) setTimeout(_initHR, 200);
-    };
-    document.addEventListener("DOMContentLoaded", () => setTimeout(_initHR, 600));
-  </script>
+const hr = window.homereserve;
+if (hr) { try{ hr.initWidgetSearch({token:'GdXT9Gz4Mv'}); }catch(e){} }
+</script>
 <style id="nv-motion-v2">
 :root{--ease:cubic-bezier(.19,1,.22,1);--ease-out:cubic-bezier(.16,.84,.3,1)}
 html{scroll-behavior:smooth}
@@ -1853,6 +1843,21 @@ footer a[href*="wa.me"] svg{fill:#fff!important}
 @media(max-width:760px) and (hover:none){
   .amen>div:active{transform:scale(.98)}
 }
+</style><style id="nv-fix-mobile2">
+/* открытое моб.меню — светлый фон: логотип и бургер тёмные */
+body:has(.mnav.open) .nav .logo-text{color:#1C1815!important}
+body:has(.mnav.open) .nav .logo-text span{color:#1C1815!important}
+body:has(.mnav.open) .nav .logo-light{opacity:0!important}
+body:has(.mnav.open) .nav .logo-dark{opacity:1!important}
+body:has(.mnav.open) .nav button svg,body:has(.mnav.open) .nav .burger{color:#1C1815!important;stroke:#1C1815}
+/* лого площадок крупнее */
+.plat-strip{gap:18px 56px!important}
+.plat-strip img{height:44px!important}
+@media(max-width:760px){.plat-strip img{height:34px!important}}
+/* скелет виджетов, пока HomeReserve не смонтировался */
+[data-instance-id]{position:relative;border-radius:14px}
+[data-instance-id]:empty{background:linear-gradient(100deg,#F1EADD 40%,#FBF7F0 50%,#F1EADD 60%);background-size:200% 100%;animation:nvShimmer 1.4s infinite linear}
+@keyframes nvShimmer{to{background-position:-200% 0}}
 </style></head>
 <body>
 

@@ -37,20 +37,7 @@
 }
 </style>
 
-    <script type="module">
-    const _TOKEN = 'GdXT9Gz4Mv';
-    let _tries = 0;
-    const _initHR = () => {
-      const hr = window.homereserve;
-      if (hr && hr.initWidgetSearch && hr.initWidgetList) {
-        try { hr.initWidgetSearch({ token: _TOKEN, instance_id: 'search' }); } catch(e) {}
-        /* каталог живёт на странице booking.html */
-        return;
-      }
-      if (_tries++ < 100) setTimeout(_initHR, 200);
-    };
-    document.addEventListener("DOMContentLoaded", () => setTimeout(_initHR, 600));
-  </script>
+    
 
 <title>Бронирование — NovaHome · апартаменты Nest One</title>
 <meta name="description" content="Полный каталог апартаментов NovaHome в Nest One и онлайн-бронирование с моментальным подтверждением.">
@@ -384,7 +371,22 @@ footer a[href*="wa.me"] svg{fill:#fff!important}
 @media(max-width:760px) and (hover:none){
   .amen>div:active{transform:scale(.98)}
 }
-</style></head>
+</style><style id="nv-fix-mobile2">
+/* открытое моб.меню — светлый фон: логотип и бургер тёмные */
+body:has(.mnav.open) .nav .logo-text{color:#1C1815!important}
+body:has(.mnav.open) .nav .logo-text span{color:#1C1815!important}
+body:has(.mnav.open) .nav .logo-light{opacity:0!important}
+body:has(.mnav.open) .nav .logo-dark{opacity:1!important}
+body:has(.mnav.open) .nav button svg,body:has(.mnav.open) .nav .burger{color:#1C1815!important;stroke:#1C1815}
+/* лого площадок крупнее */
+.plat-strip{gap:18px 56px!important}
+.plat-strip img{height:44px!important}
+@media(max-width:760px){.plat-strip img{height:34px!important}}
+/* скелет виджетов, пока HomeReserve не смонтировался */
+[data-instance-id]{position:relative;border-radius:14px}
+[data-instance-id]:empty{background:linear-gradient(100deg,#F1EADD 40%,#FBF7F0 50%,#F1EADD 60%);background-size:200% 100%;animation:nvShimmer 1.4s infinite linear}
+@keyframes nvShimmer{to{background-position:-200% 0}}
+</style><style id="nv-burger-fix">#nvBurger,#nvBurger svg,.nav .burger,.nav .burger svg{color:#1C1815!important;stroke:#1C1815!important}</style></head>
 <body>
 <nav class="nav scrolled" style="position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:20px 48px;background:transparent">
     <a href="index.html" style="display:flex;align-items:center;gap:11px;text-decoration:none;flex:none">
@@ -713,26 +715,19 @@ footer a[href*="wa.me"] svg{fill:#fff!important}
 
 </script>
 <script type="module" src="https://homereserve.ru/widget.js"></script>
-<script>
-(function(){
-  var T='GdXT9Gz4Mv', n=0;
-  function go(){ var hr=window.homereserve;
-    if(hr&&hr.initWidgetSearch&&hr.initWidgetList){
-      var s=document.querySelector('[data-instance-id="search"]'),l=document.querySelector('[data-instance-id="list"]');
-      try{if(s){s.id='hr-widget';hr.initWidgetSearch({token:T,instance_id:'search'});}}catch(e){}
-      /* list монтируем вторым: widget.js ищет тот же #hr-widget, поэтому переносим id */
-      setTimeout(function(){try{if(s)s.removeAttribute('id');if(l){l.id='hr-widget';hr.initWidgetList({token:T,instance_id:'list'});}}catch(e){}},600);
-      return;}
-    if(n++<100)setTimeout(go,200);}
-  document.addEventListener('DOMContentLoaded',function(){setTimeout(go,500)});
-  if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',function(){
-    var b=document.getElementById('book'); if(!b)return;
-    var d=document.createElement('div');
-    d.style.cssText='margin-top:14px;padding:13px 16px;border-radius:12px;background:rgba(166,124,78,.1);border:1px solid rgba(166,124,78,.35);font:600 13px Manrope,sans-serif;color:#6f5a3e';
-    d.textContent='Виджет бронирования не работает при открытии файла напрямую. Запустите start-server.command (localhost:8080) или откройте сайт на хостинге.';
-    b.appendChild(d);});}
+<script type="module">
+const hr = window.homereserve;
+const s = document.querySelector('[data-instance-id="search"]');
+const l = document.querySelector('[data-instance-id="list"]');
+if (s && hr) { s.id='hr-widget'; hr.initWidgetSearch({token:'GdXT9Gz4Mv', instance_id:'search'}); }
+let n = 0;
+(function next(){
+  if (s && s.children.length === 0 && n++ < 150) return setTimeout(next, 100);
+  try{ if (s) s.removeAttribute('id');
+    if (l && hr) { l.id='hr-widget'; hr.initWidgetList({token:'GdXT9Gz4Mv', instance_id:'list'}); } }catch(e){}
 })();
 </script>
+
 <script>
 (function(){
   var bt=document.getElementById('nvBurger'),mn=document.getElementById('nvMnav');
