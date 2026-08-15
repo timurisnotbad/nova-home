@@ -267,7 +267,134 @@
   .ct-item a{color:#1C1815;text-decoration:none;font-weight:700}
   .ct-item a:hover{color:var(--accent,#A67C4E)}
 </style>
-</head>
+<style id="nv-motion-v2">
+:root{--ease:cubic-bezier(.19,1,.22,1);--ease-out:cubic-bezier(.16,.84,.3,1)}
+html{scroll-behavior:smooth}
+[data-anim]{transition:opacity .85s var(--ease), transform .85s var(--ease)!important}
+.stagger>*{transition:opacity .65s var(--ease), transform .65s var(--ease)!important}
+a,button{-webkit-tap-highlight-color:transparent}
+.btn,.apt-book,.apt-call,.langdd-btn,.mnav a.mnav-cta{transition:transform .35s var(--ease-out),box-shadow .35s var(--ease-out),background .35s var(--ease-out),border-color .35s var(--ease-out),color .35s var(--ease-out)!important}
+.btn:active,.apt-book:active,.apt-call:active{transform:scale(.95)!important}
+.apt-slide img{transition:transform 1.2s var(--ease)}
+.apt-car:hover .apt-slide img{transform:scale(1.045)}
+.apt-track{scroll-behavior:smooth}
+.blog-card,.ct-item{transition:transform .4s var(--ease-out),box-shadow .4s var(--ease-out),border-color .4s var(--ease-out)}
+@media(hover:hover){
+  .blog-card:hover{transform:translateY(-6px);box-shadow:0 22px 54px rgba(40,30,20,.14)}
+  .ct-item:hover{transform:translateY(-3px);border-color:var(--accent,#A67C4E)}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.apt-slide img{transition:none}}
+</style>
+<link rel="prefetch" href="index.html"><link rel="prefetch" href="booking.html"><link rel="prefetch" href="contacts.html"><link rel="prefetch" href="faq.html"><link rel="prefetch" href="blog.html"><style id="nv-antiflicker">html.nv-enter body{opacity:0}html body{transition:opacity .45s cubic-bezier(.16,.84,.3,1)}</style><script>document.documentElement.classList.add('nv-enter');(function(){var done=false;function off(){if(done)return;done=true;document.documentElement.classList.remove('nv-enter');try{document.querySelectorAll('[data-anim]').forEach(function(el){var r=el.getBoundingClientRect();if(r.top<innerHeight*1.05){el.style.opacity='1';el.style.transform='none';}});}catch(e){}}
+if(document.readyState!=='loading'){off()}else{addEventListener('DOMContentLoaded',off)}
+addEventListener('load',off);addEventListener('pageshow',off);setTimeout(off,800);})();</script><style id="nv-footer-v2">
+.pay-row{gap:12px}
+/* одинаковые боксы: все лого в равных рамках, вписаны contain */
+.pay-row img{width:86px;height:40px;object-fit:contain;object-position:center;background:#fff;border:1px solid rgba(28,24,21,.12);border-radius:10px;padding:7px 12px;box-sizing:border-box;opacity:1;filter:none}
+.pay-row img[alt="Payoneer"],.pay-row img[alt="Apple Pay"],.pay-row img[alt="Google Pay"]{padding:3px 8px}
+/* фикс синего названия: логотип-текст всегда фирменного цвета */
+.logo-text{color:#1C1815}
+.nav a,.nav a:visited{color:inherit}
+/* телефоны: строгая колонка, иконка+номер+подпись в ряд */
+.foot-phone{display:flex!important;align-items:center;gap:12px;text-decoration:none;margin:0 0 14px;line-height:1.25}
+.foot-phone i{width:22px;flex:none;text-align:center;font-size:18px}
+.foot-phone span{display:flex;flex-direction:column;gap:2px;font:600 15px Manrope,sans-serif;color:#1C1815;font-variant-numeric:tabular-nums}
+.foot-phone small{font:500 11px Manrope,sans-serif;letter-spacing:.04em;color:rgba(28,24,21,.45)}
+
+.pay-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-height:44px}
+.pay-row img{filter:grayscale(.15);opacity:.92;border-radius:6px;background:#fff}
+.soc-row{display:flex;align-items:center;gap:10px;min-height:44px}
+.soc-row a{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;color:rgba(28,24,21,.75);background:transparent;border:1px solid rgba(28,24,21,.18);transition:all .3s cubic-bezier(.16,.84,.3,1)}
+.soc-row a:hover{background:#1C1815;color:#F4ECDD;border-color:#1C1815;transform:translateY(-2px)}
+footer{padding-left:24px;padding-right:24px}
+</style><style id="nv-faq-anim">
+:root{interpolate-size:allow-keywords}
+details.nv::details-content{block-size:0;overflow:hidden;transition:block-size .5s cubic-bezier(.19,1,.22,1),content-visibility .5s allow-discrete}
+details.nv[open]::details-content{block-size:auto}
+details.nv .a-wrap{display:grid;grid-template-columns:1fr;gap:24px;align-items:start}
+details.nv .a-wrap.has-media{grid-template-columns:1fr 280px}
+details.nv .a-media{border-radius:14px;overflow:hidden;background:#F1EADD;min-height:150px}
+details.nv .a-media:empty{display:none}
+details.nv .a-media img,details.nv .a-media video{width:100%;height:100%;object-fit:cover;display:block}
+@media(max-width:700px){details.nv .a-wrap.has-media{grid-template-columns:1fr}}
+</style><style id="nv-smooth">@media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}*{scrollbar-width:thin}img,video{content-visibility:auto}</style><script>/* инерционная плавность якорных переходов */(function(){document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a)return;var el=document.querySelector(a.getAttribute('href'));if(!el)return;e.preventDefault();var y=el.getBoundingClientRect().top+pageYOffset-70,s=pageYOffset,d=y-s,t0=null;function step(t){if(!t0)t0=t;var p=Math.min((t-t0)/900,1),e2=1-Math.pow(1-p,4);scrollTo(0,s+d*e2);if(p<1)requestAnimationFrame(step)}requestAnimationFrame(step)})})();</script><style id="nv-nav-glass">
+.nav{background:transparent!important;box-shadow:none!important;transition:background .5s ease,box-shadow .5s ease,padding .5s ease,backdrop-filter .5s ease}
+.nav.scrolled{background:rgba(251,247,240,.68)!important;backdrop-filter:blur(20px) saturate(1.4)!important;-webkit-backdrop-filter:blur(20px) saturate(1.4)!important;box-shadow:0 1px 0 rgba(40,30,20,.07)!important;padding-top:12px!important;padding-bottom:12px!important}
+</style><style id="nv-ui-unify">
+/* ховер навигации */
+.nav .navlink{position:relative}
+.nav .navlink:hover{color:#FB7A1E!important}
+.nav .navlink::after{content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;border-radius:2px;background:linear-gradient(90deg,#FF9D2E,#EE5A12);transform:scaleX(0);transform-origin:var(--ux,50%) 50%;transition:transform .42s cubic-bezier(.16,.84,.3,1)}
+.nav .navlink:hover::after{transform:scaleX(1)}
+/* до полной загрузки: панель языков и моб.меню скрыты, кнопки не прыгают */
+.langdd-panel{opacity:0;visibility:hidden;pointer-events:none}
+.langdd.open .langdd-panel{opacity:1;visibility:visible;pointer-events:auto}
+.mnav:not(.open){display:none}
+/* WhatsApp в футере: светлый текст */
+footer a[href*="wa.me"]{color:#fff!important}
+footer a[href*="wa.me"] svg{fill:#fff!important}
+.nav .btn-primary:hover,.mnav .mnav-cta:hover{background:#fff!important;background-image:none!important;color:#EE5A12!important;box-shadow:0 10px 26px rgba(238,90,18,.28);transform:translateY(-1px)}
+.langdd-btn{background:rgba(255,255,255,.22)!important;backdrop-filter:blur(16px) saturate(1.4)!important;-webkit-backdrop-filter:blur(16px) saturate(1.4)!important;border:1px solid rgba(255,255,255,.38)!important;border-radius:999px!important;color:inherit!important}
+.nav.scrolled .langdd-btn{background:rgba(251,247,240,.5)!important;border-color:rgba(28,24,21,.15)!important}
+.langdd-panel{background:rgba(251,247,240,.72)!important;backdrop-filter:blur(22px) saturate(1.5)!important;-webkit-backdrop-filter:blur(22px) saturate(1.5)!important;border:1px solid rgba(255,255,255,.4)!important;border-radius:16px!important;box-shadow:0 18px 44px rgba(40,30,20,.2)!important;overflow:hidden}
+/* стеклянный языковой дропдаун */
+.langdd-btn{background:rgba(251,247,240,.35)!important;backdrop-filter:blur(14px) saturate(1.3)!important;-webkit-backdrop-filter:blur(14px) saturate(1.3)!important;border:1px solid rgba(28,24,21,.14)!important;border-radius:999px!important}
+.langdd-panel{background:rgba(251,247,240,.75)!important;backdrop-filter:blur(20px) saturate(1.4)!important;-webkit-backdrop-filter:blur(20px) saturate(1.4)!important;border:1px solid rgba(28,24,21,.1)!important;border-radius:16px!important;box-shadow:0 18px 44px rgba(40,30,20,.16)!important;overflow:hidden}
+
+</style><style id="nv-mobile-v2">
+@media(max-width:760px){
+  html{-webkit-text-size-adjust:100%}
+  body{overflow-x:hidden}
+  .nav{padding-left:18px!important;padding-right:18px!important}
+  header#top{padding:110px 22px 70px!important;min-height:100svh!important}
+  header#top h1{font-size:clamp(34px,10vw,44px)!important}
+  header#top p{font-size:16px!important}
+  header#top .btn{width:100%;justify-content:center;padding:15px 20px!important}
+  section,footer{padding-left:22px!important;padding-right:22px!important}
+  section[id="book"]{margin:-30px 16px 0!important;padding:18px!important}
+  .fac-grid,.reviews-grid,.ct-grid,.blog-grid{grid-template-columns:1fr!important;gap:16px!important}
+  .apt-track{scroll-snap-type:x mandatory}
+  .apt-track>*{scroll-snap-align:center}
+  h2{font-size:clamp(26px,7.4vw,34px)!important}
+  .pg-h1{font-size:clamp(30px,9vw,40px)!important}
+  footer>div:first-of-type{grid-template-columns:1fr!important;gap:30px!important}
+  .pay-row{gap:8px}
+  .pay-row img{width:72px;height:34px;padding:5px 9px}
+  #nvReg{left:16px;right:16px;bottom:16px;max-width:none}
+  #nvProfile{right:16px;bottom:16px}
+  .ct-quick a{flex:1;justify-content:center}
+  details .a-wrap.has-media{grid-template-columns:1fr!important}
+  /* тап-таргеты */
+  .navlink,.langdd-btn,.foot-phone,.soc-row a{min-height:44px}
+}
+@media(max-width:430px){
+  header#top h1{font-size:clamp(30px,9.6vw,38px)!important}
+  .pay-row img{width:64px;height:32px}
+}
+</style><style id="nv-cta-amen">
+.nav .btn-primary,.mnav .mnav-cta{background:linear-gradient(135deg,#FF9D2E 0%,#FB7A1E 52%,#EE5A12 100%)!important;color:#fff!important;border:0!important}
+.nav .btn-primary:hover,.mnav .mnav-cta:hover{background:#fff!important;background-image:none!important;color:#EE5A12!important;box-shadow:0 10px 26px rgba(238,90,18,.28);transform:translateY(-1px)}
+.amen>div,.amen-grid>div{transition:transform .38s cubic-bezier(.16,.84,.3,1),box-shadow .38s cubic-bezier(.16,.84,.3,1)}
+@media(hover:hover){.amen>div:hover,.amen-grid>div:hover{transform:translateY(-6px);box-shadow:0 18px 44px rgba(40,30,20,.13)}}
+</style><style id="nv-mobile-v3">
+@media(max-width:760px){
+  .nav{gap:10px!important}
+  .nav .navlink{display:none}
+  .nav .btn-primary{padding:10px 16px!important;font-size:13px!important}
+  .plat-strip img{height:24px!important}
+  h1{overflow-wrap:break-word}
+  section[id="reviews"] .reviews-grid{grid-template-columns:1fr!important}
+  .apt-slide{min-width:86vw!important}
+  input,select,textarea{font-size:16px!important} /* без зума iOS */
+  .langdd-panel{right:auto;left:0}
+  #nvReg h4{font-size:15px}
+  .a-media{min-height:120px}
+  footer{padding-bottom:34px!important}
+}
+@media(max-width:760px) and (hover:none){
+  .amen>div:active{transform:scale(.98)}
+}
+</style></head>
 <body>
 <nav class="nav scrolled" style="position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:20px 48px;background:transparent">
     <a href="index.html" style="display:flex;align-items:center;gap:11px;text-decoration:none;flex:none">
@@ -306,9 +433,9 @@
 <div data-anim=""><div class="pg-eyebrow">FAQ</div>
 <h1 class="pg-h1">Часто задаваемые вопросы</h1>
 <p class="pg-sub">Коротко и честно — о бронировании, заселении и жизни в NovaHome.</p></div>
-<div data-anim="" class="faq-block"><h2>Бронирование и оплата</h2><details class="nv"><summary>Как забронировать апартаменты?</summary><div class="a">Онлайн за пару минут: выберите даты на странице «Бронирование», квартиру — и готово. Любите живое общение — напишите в Telegram <a href="https://t.me/novahome_uzb" target="_blank" rel="noopener">@novahome_uzb</a>, менеджер всё сделает за вас.</div></details><details class="nv"><summary>Нужна ли предоплата?</summary><div class="a">Условия зависят от квартиры и дат — менеджер озвучит их до подтверждения, без сюрпризов. Цена, которую вы видите, — финальная: никаких скрытых комиссий.</div></details><details class="nv"><summary>Какие способы оплаты принимаются?</summary><div class="a">Visa, Western Union, Payoneer, Apple Pay и наличные. Для командировочных — чеки и закрывающие документы по запросу.</div></details><details class="nv"><summary>Можно ли отменить или перенести бронь?</summary><div class="a">Можно. Чем раньше напишете — тем проще: условия отмены подтверждаем при бронировании, а перенос дат почти всегда решается одним сообщением.</div></details></div>
-<div data-anim="" class="faq-block"><h2>Проживание</h2><details class="nv"><summary>Со скольки заезд и до скольки выезд?</summary><div class="a">Стандартно заезд с 14:00, выезд до 11:00. Прилетаете ночью или улетаете вечером? Ранний заезд и поздний выезд — по договорённости, в зависимости от загрузки.</div></details><details class="nv"><summary>Как проходит заселение?</summary><div class="a">Self check-in 24/7: перед заездом пришлём инструкцию и код доступа. Заезжайте хоть в три ночи — никого ждать не нужно.</div></details><details class="nv"><summary>Что входит в стоимость?</summary><div class="a">Всё для жизни: свежее бельё и полотенца, быстрый Wi-Fi, полностью оборудованная кухня, стиральная машина, климат-контроль и поддержка 24/7.</div></details><details class="nv"><summary>Wi-Fi быстрый?</summary><div class="a">Быстрее, чем лифт на 48-й этаж: видеозвонки, стриминг и работа из дома — без «зависаний».</div></details><details class="nv"><summary>Можно с детьми и животными?</summary><div class="a">С детьми — конечно: детская кроватка, стульчик и игрушки бесплатно. С питомцами — напишите нам, обсудим условия индивидуально.</div></details></div>
-<div data-anim="" class="faq-block"><h2>Дополнительно</h2><details class="nv"><summary>Делаете ли регистрацию для иностранных гостей?</summary><div class="a">Да. Оформляем обязательную временную регистрацию (Emehmon) и присылаем квитанцию в мессенджер — на границе вопросов не будет.</div></details><details class="nv"><summary>Есть ли трансфер из аэропорта?</summary><div class="a">Есть: встретим с табличкой в зале прилёта и довезём до дома. Стоимость фиксируем заранее — никаких «таксистских» сюрпризов.</div></details><details class="nv"><summary>Есть ли скидки на длительное проживание?</summary><div class="a">От 7 ночей — скидка 5%. Планируете месяц и дольше — напишите менеджеру, соберём индивидуальные условия.</div></details></div>
+<div data-anim="" class="faq-block"><h2>Бронирование и оплата</h2><details class="nv"><summary>Как забронировать апартаменты?</summary><div class="a-wrap has-media"><div class="a">Онлайн за пару минут: выберите даты на странице «Бронирование», квартиру — и готово. Любите живое общение — напишите в Telegram <a href="https://t.me/novahome_uzb" target="_blank" rel="noopener">@novahome_uzb</a>, менеджер всё сделает за вас.</div><div class="a-media"></div></div></details><details class="nv"><summary>Нужна ли предоплата?</summary><div class="a-wrap has-media"><div class="a">Условия зависят от квартиры и дат — менеджер озвучит их до подтверждения, без сюрпризов. Цена, которую вы видите, — финальная: никаких скрытых комиссий.</div><div class="a-media"></div></div></details><details class="nv"><summary>Какие способы оплаты принимаются?</summary><div class="a-wrap has-media"><div class="a">Visa, Western Union, Payoneer, Apple Pay и наличные. Для командировочных — чеки и закрывающие документы по запросу.</div><div class="a-media"></div></div></details><details class="nv"><summary>Можно ли отменить или перенести бронь?</summary><div class="a-wrap has-media"><div class="a">Можно. Чем раньше напишете — тем проще: условия отмены подтверждаем при бронировании, а перенос дат почти всегда решается одним сообщением.</div><div class="a-media"></div></div></details></div>
+<div data-anim="" class="faq-block"><h2>Проживание</h2><details class="nv"><summary>Со скольки заезд и до скольки выезд?</summary><div class="a-wrap has-media"><div class="a">Стандартно заезд с 14:00, выезд до 11:00. Прилетаете ночью или улетаете вечером? Ранний заезд и поздний выезд — по договорённости, в зависимости от загрузки.</div><div class="a-media"></div></div></details><details class="nv"><summary>Как проходит заселение?</summary><div class="a-wrap has-media"><div class="a">Self check-in 24/7: перед заездом пришлём инструкцию и код доступа. Заезжайте хоть в три ночи — никого ждать не нужно.</div><div class="a-media"></div></div></details><details class="nv"><summary>Что входит в стоимость?</summary><div class="a-wrap has-media"><div class="a">Всё для жизни: свежее бельё и полотенца, быстрый Wi-Fi, полностью оборудованная кухня, стиральная машина, климат-контроль и поддержка 24/7.</div><div class="a-media"></div></div></details><details class="nv"><summary>Wi-Fi быстрый?</summary><div class="a-wrap has-media"><div class="a">Быстрее, чем лифт на 48-й этаж: видеозвонки, стриминг и работа из дома — без «зависаний».</div><div class="a-media"></div></div></details><details class="nv"><summary>Можно с детьми и животными?</summary><div class="a-wrap has-media"><div class="a">С детьми — конечно: детская кроватка, стульчик и игрушки бесплатно. С питомцами — напишите нам, обсудим условия индивидуально.</div><div class="a-media"></div></div></details></div>
+<div data-anim="" class="faq-block"><h2>Дополнительно</h2><details class="nv"><summary>Нужен ли ЗАГС для заселения?</summary><div class="a-wrap has-media"><div class="a">Для местных гостей — да, для иностранцев — нет.</div><div class="a-media"></div></div></details><details class="nv"><summary>Делаете ли регистрацию для иностранных гостей?</summary><div class="a-wrap has-media"><div class="a">Да. Оформляем обязательную временную регистрацию (Emehmon) и присылаем квитанцию в мессенджер — на границе вопросов не будет.</div><div class="a-media"></div></div></details><details class="nv"><summary>Есть ли трансфер из аэропорта?</summary><div class="a-wrap has-media"><div class="a">Есть: встретим с табличкой в зале прилёта и довезём до дома. Стоимость фиксируем заранее — никаких «таксистских» сюрпризов.</div><div class="a-media"></div></div></details><details class="nv"><summary>Есть ли скидки на длительное проживание?</summary><div class="a-wrap has-media"><div class="a">От 7 ночей — скидка 5%. Планируете месяц и дольше — напишите менеджеру, соберём индивидуальные условия.</div><div class="a-media"></div></div></details></div>
 </main>
 <footer style="background:#FFFFFF;color:#1C1815;border-top:1px solid #EDE8DF;padding:64px 48px 40px">
     <div data-anim="" style="max-width:1180px;margin:0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:40px;flex-wrap:wrap">
@@ -318,10 +445,10 @@
       </div>
       <div>
         <div style="font:700 11px Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:rgba(28,24,21,.5);margin-bottom:16px">Связаться</div>
-        <!-- TODO: замените дополнительный номер +998 90 000 00 00 на реальный -->
+        <!-- TODO: замените дополнительный номер +998 33 320 05 28 на реальный -->
         <a class="foot-phone" href="tel:+998900115074"><i class="ph-fill ph-phone"></i><span>+998 90 011 50 74<small>Основной номер</small></span></a>
-        <a class="foot-phone" href="tel:+998900000000" style="margin-bottom:18px"><i class="ph-fill ph-phone-plus"></i><span>+998 90 000 00 00<small>Дополнительный номер</small></span></a>
-        <a href="https://wa.me/998900115074" style="display:inline-flex;align-items:center;gap:12px;text-decoration:none;background:var(--accent,#A67C4E);color:#1C1815;padding:14px 24px;border-radius:999px;font:700 15px Manrope,sans-serif"><i class="ph-fill ph-whatsapp-logo" style="font-size:20px"></i>+998 90 011 50 74</a>
+        <a class="foot-phone" href="tel:+998333200528" style="margin-bottom:18px"><i class="ph-fill ph-phone-plus"></i><span>+998 33 320 05 28<small>Дополнительный номер</small></span></a>
+        <a href="https://wa.me/998900115074" style="display:inline-flex;align-items:center;gap:12px;text-decoration:none;background:var(--accent,#A67C4E);color:#1C1815;padding:14px 24px;border-radius:999px;font:700 15px Manrope,sans-serif"><i class="ph-fill ph-whatsapp-logo" style="font-size:20px"></i>Написать в WhatsApp</a>
         <div style="display:flex;gap:18px;margin-top:20px">
           <a href="https://instagram.com/novahome_uzb" style="text-decoration:none;display:flex;align-items:center;gap:8px;font:500 13px Manrope,sans-serif;color:rgba(28,24,21,.72)"><i class="ph-fill ph-instagram-logo" style="font-size:18px;color:var(--accent,#A67C4E)"></i>@novahome_uzb</a>
         </div>
@@ -340,11 +467,7 @@
       <div>
         <div style="font:700 11px Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:rgba(28,24,21,.5);margin-bottom:12px">Принимаем к оплате</div>
         <div class="pay-row">
-          <span class="pay-logo" title="Visa"><span class="pl-visa">VISA</span></span>
-          <span class="pay-logo" title="Western Union"><span class="pl-wu">WU</span><span class="pl-txt">Western&nbsp;Union</span></span>
-          <span class="pay-logo" title="Payoneer"><span class="pl-dot"></span><span class="pl-txt" style="font-weight:800">payoneer</span></span>
-          <span class="pay-logo" title="Apple Pay"><svg width="14" height="17" viewBox="0 0 384 512" fill="#1C1815"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><span class="pl-txt" style="font-weight:700">Pay</span></span>
-        </div>
+          <img src="assets/pay-visa.png" alt="Visa"><img src="assets/pay-wu.png" alt="Western Union"><img src="assets/pay-payoneer.png" alt="Payoneer"><img src="assets/pay-applepay.png" alt="Apple Pay"><img src="assets/pay-gpay.png" alt="Google Pay"></div>
       </div>
       <div>
         <div style="font:700 11px Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:rgba(28,24,21,.5);margin-bottom:12px">Мы на связи</div>
@@ -365,9 +488,9 @@
 <div id="promo5" role="dialog" aria-label="Скидка на длительное проживание" aria-hidden="true">
   <button type="button" id="promo5x" aria-label="Закрыть">&times;</button>
   <div class="p5-badge">−5%</div>
-  <div class="p5-t">Длительное проживание — скидка 5%</div>
-  <div class="p5-d">При бронировании от 7 ночей — скидка 5% на всё проживание.</div>
-  <a class="p5-cta" href="booking.html" id="promo5go">Забронировать со скидкой</a>
+  <div class="p5-t">Зарегистрируйтесь — и получите скидку 5%</div>
+  <div class="p5-d">Оставьте контакты при первом бронировании — попадёте в программу лояльности NovaHome со скидкой 5% на проживание.</div>
+  <a class="p5-cta" href="booking.html" id="promo5go">Получить скидку</a>
 </div>
 <noscript><style>[data-anim],.stagger>*{opacity:1!important;transform:none!important}</style></noscript>
 <script>setTimeout(function(){document.querySelectorAll('[data-anim]:not(.in)').forEach(function(e){e.classList.add('in')});},1800);</script>
@@ -534,8 +657,8 @@
       "Основной номер":["Main number","Asosiy raqam","Негізгі нөмір","대표 번호"],
       "Дополнительный номер":["Additional number","Qo'shimcha raqam","Қосымша нөмір","추가 번호"]
     ,
-      "Длительное проживание — скидка 5%":["Long stay — 5% off","Uzoq muddatli yashash — 5% chegirma","Ұзақ тұру — 5% жеңілдік","장기 숙박 — 5% 할인"],
-      "При бронировании от 7 ночей — скидка 5% на всё проживание.":["Book 7+ nights and get 5% off your entire stay.","7 kecha va undan ko'p bron qilsangiz — butun yashash uchun 5% chegirma.","7 түн және одан көп брондасаңыз — бүкіл тұруға 5% жеңілдік.","7박 이상 예약 시 전체 숙박 5% 할인."],
+      "Зарегистрируйтесь — и получите скидку 5%":["Long stay — 5% off","Uzoq muddatli yashash — 5% chegirma","Ұзақ тұру — 5% жеңілдік","장기 숙박 — 5% 할인"],
+      "Оставьте контакты при первом бронировании — попадёте в программу лояльности NovaHome со скидкой 5% на проживание.":["Book 7+ nights and get 5% off your entire stay.","7 kecha va undan ko'p bron qilsangiz — butun yashash uchun 5% chegirma.","7 түн және одан көп брондасаңыз — бүкіл тұруға 5% жеңілдік.","7박 이상 예약 시 전체 숙박 5% 할인."],
       "Забронировать со скидкой":["Book with discount","Chegirma bilan bron qilish","Жеңілдікпен брондау","할인가로 예약"],
       "Получить консультацию":["Get a consultation","Maslahat olish","Кеңес алу","상담 받기"],
       "Бронирование":["Booking","Bron qilish","Брондау","예약"],
@@ -606,5 +729,51 @@
   addEventListener('keydown',function(e){if(e.key==='Escape')set(false);});
 })();
 </script>
-</body>
+<script>/* нормализация bare-атрибута lazy из виджета HomeReserve */
+(function(){var fx=function(r){(r.querySelectorAll?r.querySelectorAll('[lazy]'):[]).forEach(function(e){e.removeAttribute('lazy');if(!e.hasAttribute('loading'))e.setAttribute('loading','lazy')})};new MutationObserver(function(ms){ms.forEach(function(m){if(m.type==='attributes'&&m.target.hasAttribute&&m.target.hasAttribute('lazy')){m.target.removeAttribute('lazy');if(!m.target.hasAttribute('loading'))m.target.setAttribute('loading','lazy')}m.addedNodes&&m.addedNodes.forEach(function(n){if(n.nodeType===1){if(n.hasAttribute&&n.hasAttribute('lazy')){n.removeAttribute('lazy');n.setAttribute('loading','lazy')}fx(n)}})})}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['lazy']});addEventListener('load',function(){fx(document)});})();
+</script>
+<script>(function(){if(CSS.supports&&CSS.supports('interpolate-size','allow-keywords'))return;document.querySelectorAll('details.nv').forEach(function(d){var s=d.querySelector('summary'),w=d.querySelector('.a-wrap')||d.querySelector('.a');if(!s||!w)return;s.addEventListener('click',function(e){e.preventDefault();if(d.open){w.style.height=w.scrollHeight+'px';requestAnimationFrame(function(){w.style.transition='height .45s cubic-bezier(.19,1,.22,1),opacity .35s';w.style.overflow='hidden';w.style.height='0';w.style.opacity='0';setTimeout(function(){d.open=false;w.style.cssText=''},460)})}else{d.open=true;var t=w.scrollHeight;w.style.height='0';w.style.opacity='0';w.style.overflow='hidden';requestAnimationFrame(function(){w.style.transition='height .5s cubic-bezier(.19,1,.22,1),opacity .45s .1s';w.style.height=t+'px';w.style.opacity='1';setTimeout(function(){w.style.cssText=''},520)})}})})})();</script><script>(function(){var nav=document.querySelector('.nav')||document.querySelector('nav');if(!nav)return;nav.classList.add('nav');function f(){nav.classList.toggle('scrolled',scrollY>24)}addEventListener('scroll',f,{passive:true});f()})();</script><style id="nv-reg-css">
+#nvReg{position:fixed;right:22px;bottom:22px;z-index:9000;max-width:320px;background:rgba(251,247,240,.9);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid rgba(28,24,21,.12);border-radius:20px;box-shadow:0 22px 54px rgba(40,30,20,.22);padding:20px 22px;font-family:Manrope,sans-serif;opacity:0;transform:translateY(16px);transition:opacity .6s cubic-bezier(.16,.84,.3,1),transform .6s cubic-bezier(.16,.84,.3,1)}
+#nvReg.on{opacity:1;transform:none}
+#nvReg .x{position:absolute;top:10px;right:14px;border:0;background:none;font-size:18px;color:#8a7f70;cursor:pointer}
+#nvReg h4{margin:0 0 6px;font:800 16px 'Schibsted Grotesk',Manrope,sans-serif;color:#1C1815}
+#nvReg p{margin:0 0 14px;font:500 13px/1.5 Manrope,sans-serif;color:#5d5346}
+#nvReg input{width:100%;box-sizing:border-box;margin-bottom:10px;padding:11px 14px;border:1px solid #E3D7C2;border-radius:12px;font:500 14px Manrope,sans-serif;background:#fff;outline:none}
+#nvReg input:focus{border-color:var(--accent,#A67C4E)}
+#nvReg button.go{width:100%;padding:12px;border:0;border-radius:999px;background:var(--accent,#A67C4E);color:#fff;font:700 14px Manrope,sans-serif;cursor:pointer;transition:transform .3s,box-shadow .3s}
+#nvReg button.go:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(166,124,78,.4)}
+#nvReg .done{font:600 14px Manrope,sans-serif;color:#1C1815}
+#nvProfile{position:fixed;right:22px;bottom:22px;z-index:9000;display:none;align-items:center;gap:10px;background:rgba(251,247,240,.9);backdrop-filter:blur(18px);border:1px solid rgba(28,24,21,.12);border-radius:999px;padding:10px 18px 10px 12px;font:700 13px Manrope,sans-serif;color:#1C1815;box-shadow:0 14px 36px rgba(40,30,20,.18)}
+#nvProfile .av{width:32px;height:32px;border-radius:50%;background:var(--accent,#A67C4E);color:#fff;display:flex;align-items:center;justify-content:center;font:800 14px Manrope,sans-serif}
+</style>
+<div id="nvReg" hidden>
+  <button class="x" aria-label="Закрыть">×</button>
+  <h4>Скидка 5% за регистрацию</h4>
+  <p>Создайте профиль гостя — получите −5% на проживание и быстрые повторные брони.</p>
+  <div class="form">
+    <input id="nvRegName" type="text" placeholder="ФИО" autocomplete="name">
+    <input id="nvRegEmail" type="email" placeholder="Email" autocomplete="email">
+    <button class="go" type="button">Зарегистрироваться −5%</button>
+  </div>
+</div>
+<div id="nvProfile"><span class="av"></span><span class="nm"></span></div>
+<script id="nv-reg-js">(function(){
+var K='nvGuestProfile';
+function get(){try{return JSON.parse(localStorage.getItem(K)||'null')}catch(e){return null}}
+var reg=document.getElementById('nvReg'),prof=document.getElementById('nvProfile');
+function showProfile(p){reg.hidden=true;prof.style.display='flex';prof.querySelector('.av').textContent=(p.name||'?').trim().charAt(0).toUpperCase();prof.querySelector('.nm').textContent=(p.name||'').split(' ')[0]+' · скидка 5%'}
+var p=get();
+if(p){showProfile(p);return}
+if(sessionStorage.getItem('nvRegClosed'))return;
+setTimeout(function(){reg.hidden=false;requestAnimationFrame(function(){reg.classList.add('on')})},6000);
+reg.querySelector('.x').addEventListener('click',function(){reg.classList.remove('on');sessionStorage.setItem('nvRegClosed','1');setTimeout(function(){reg.hidden=true},600)});
+reg.querySelector('.go').addEventListener('click',function(){
+var name=document.getElementById('nvRegName').value.trim(),email=document.getElementById('nvRegEmail').value.trim();
+if(!name||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){reg.querySelector('.go').textContent='Заполните ФИО и email';setTimeout(function(){reg.querySelector('.go').textContent='Зарегистрироваться −5%'},1800);return}
+var prof2={name:name,email:email,discount:5,created:Date.now()};
+localStorage.setItem(K,JSON.stringify(prof2));
+reg.querySelector('.form').innerHTML='<div class="done">Готово, '+name.split(' ')[0]+'! Скидка 5% закреплена за профилем '+email+'.</div>';
+setTimeout(function(){reg.classList.remove('on');setTimeout(function(){reg.hidden=true;showProfile(prof2)},600)},2600);
+});
+})();</script><script id="nv-underline-js">document.querySelectorAll('.nav .navlink').forEach(function(a){a.addEventListener('mouseenter',function(e){var r=a.getBoundingClientRect();a.style.setProperty('--ux',Math.round(e.clientX-r.left)+'px')})});</script></body>
 </html>
